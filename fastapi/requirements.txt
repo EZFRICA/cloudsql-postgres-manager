@@ -1,0 +1,10 @@
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+cloud-sql-python-connector>=1.18.3
+pg8000>=1.31.4
+google-api-core>=2.25.1
+google-cloud-resource-manager==1.14.2
+google-cloud-secret-manager>=2.24.0
+google-cloud-iam==2.19.1
+protobuf==6.31.1
+pydantic==2.11.7
