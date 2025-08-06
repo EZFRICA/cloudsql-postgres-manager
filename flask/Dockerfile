@@ -26,4 +26,4 @@ USER myuser
 EXPOSE 8080
 
 # Command to start the Flask application with gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "main:app"] 
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "app.main:app"] 
