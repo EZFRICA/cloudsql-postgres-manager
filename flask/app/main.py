@@ -1,9 +1,9 @@
 import atexit
 
 from flask import Flask, request, jsonify
-from services.cloudsql import CloudSQLUserManager
-from services.pubsub import PubSubMessageParser
-from utils.logging_config import logger
+from app.services.cloudsql import CloudSQLUserManager
+from app.services.pubsub import PubSubMessageParser
+from app.utils.logging_config import logger
 
 app = Flask(__name__)
 

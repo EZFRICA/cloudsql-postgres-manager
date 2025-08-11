@@ -7,7 +7,7 @@ A comprehensive solution for automating Google Cloud SQL PostgreSQL database man
 In organizations managing multiple databases, manual database administration becomes increasingly tedious and error-prone. This is especially true when dealing with Google Cloud SQL PostgreSQL instances where you need to:
 
 - **Manually create database instances** for each project/environment
-- **Manage database passwords** securely across multiple instances
+- **Manage database admin passwords** securely across multiple instances
 - **Create and configure databases** within each instance
 - **Add IAM users and service accounts** with appropriate permissions
 - **Grant specific database permissions** to each user (readonly, readwrite, admin)
@@ -96,7 +96,7 @@ terraform apply
 
 **What Terraform automatically creates:**
 - ✅ **Cloud SQL PostgreSQL instance** with private networking
-- ✅ **Secret Manager secret** for secure password storage
+- ✅ **Secret Manager secret** for secure postgres user password storage
 - ✅ **Service account** with necessary IAM permissions
 - ✅ **VPC and networking** resources
 - ✅ **Databases** within the instance
@@ -335,18 +335,10 @@ The cloud run service account requires the following roles:
 ### Network Security
 
 - VPC with private subnets
-- Firewall rules for Cloud SQL and FastAPI/Flask
-- Private IP addresses for database connections
+- Private IP addresses for database connections (PSA or PSC)
 - Cloud Run need VPC Serverless Connectors or Direct VPC egress
 
 ## 🧪 Testing
-
-### Unit Tests
-
-```bash
-# Run tests
-python -m pytest tests/
-```
 
 ### Integration Tests
 
@@ -373,10 +365,6 @@ Once the service is running, visit:
 4. Add tests
 5. Submit a pull request
 
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## 🆘 Support
 
 For support and questions:
@@ -386,10 +374,7 @@ For support and questions:
 
 ## 🔄 Version History
 
-- **v4.0.0**: Complete refactoring with modular architecture
-- **v3.0.0**: Added Flask service and comprehensive usage scenario
-- **v2.0.0**: Enhanced security and multi-environment support
-- **v1.0.0**: Initial release with FastAPI service and Terraform infrastructure
+- **v0.1.0**: Initial release with FastAPI/Flask service and Terraform/Pulumi infrastructure
 
 ---
 
