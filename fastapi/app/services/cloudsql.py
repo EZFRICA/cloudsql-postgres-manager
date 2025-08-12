@@ -7,7 +7,8 @@ from google.iam.v1 import iam_policy_pb2
 from ..utils.logging_config import logger
 from ..utils.secret_manager import access_regional_secret
 
-DB_ADMIN_USER = os.environ.get('DB_ADMIN_USER', 'postgres')
+DB_ADMIN_USER = os.environ.get("DB_ADMIN_USER", "postgres")
+
 
 class CloudSQLUserManager:
     """Manager for IAM user permissions in Cloud SQL"""
@@ -28,12 +29,14 @@ class CloudSQLUserManager:
         Transformation:
         my-service@project.iam.gserviceaccount.com -> my-service@project
         """
-        if service_account_email.endswith('.gserviceaccount.com'):
-            return service_account_email.replace('.gserviceaccount.com', '')
+        if service_account_email.endswith(".gserviceaccount.com"):
+            return service_account_email.replace(".gserviceaccount.com", "")
         return service_account_email
 
     @contextmanager
-    def get_connection(self, project_id: str, region: str, instance_name: str, database_name: str):
+    def get_connection(
+        self, project_id: str, region: str, instance_name: str, database_name: str
+    ):
         """
         Context manager for Cloud SQL connections with robust error handling
 
@@ -64,7 +67,7 @@ class CloudSQLUserManager:
                 user=DB_ADMIN_USER,
                 password=admin_password,
                 db=database_name,
-                ip_type=IPTypes.PRIVATE
+                ip_type=IPTypes.PRIVATE,
             )
             conn.autocommit = False
             yield conn
@@ -84,7 +87,9 @@ class CloudSQLUserManager:
                 except Exception as close_err:
                     logger.warning(f"Connection close failed: {close_err}")
 
-    def validate_iam_permissions(self, project_id: str, iam_users: List[Dict]) -> Tuple[bool, List[str]]:
+    def validate_iam_permissions(
+        self, project_id: str, iam_users: List[Dict]
+    ) -> Tuple[bool, List[str]]:
         """
         Validate that users have required IAM permissions
 
@@ -102,7 +107,9 @@ class CloudSQLUserManager:
         required_role = "roles/cloudsql.instanceUser"
 
         try:
-            request = iam_policy_pb2.GetIamPolicyRequest(resource=f"projects/{project_id}")
+            request = iam_policy_pb2.GetIamPolicyRequest(
+                resource=f"projects/{project_id}"
+            )
             policy = client.get_iam_policy(request=request)
 
             # Extract all members with the required role
@@ -113,23 +120,31 @@ class CloudSQLUserManager:
                         if member.startswith("user:"):
                             members_with_role.add(member[5:])  # Remove "user:"
                         elif member.startswith("serviceAccount:"):
-                            members_with_role.add(member[15:])  # Remove "serviceAccount:"
+                            members_with_role.add(
+                                member[15:]
+                            )  # Remove "serviceAccount:"
 
-            logger.info(f"Found {len(members_with_role)} members with role {required_role} in project {project_id}")
+            logger.info(
+                f"Found {len(members_with_role)} members with role {required_role} in project {project_id}"
+            )
 
             # Check each user
-            all_usernames = {user.get('name') for user in iam_users if user.get('name')}
+            all_usernames = {user.get("name") for user in iam_users if user.get("name")}
             invalid_users = list(all_usernames - members_with_role)
 
             if invalid_users:
-                logger.warning(f"Users missing required IAM role '{required_role}': {invalid_users}")
+                logger.warning(
+                    f"Users missing required IAM role '{required_role}': {invalid_users}"
+                )
 
             return not invalid_users, invalid_users
 
         except Exception as e:
-            logger.error(f"Failed to validate IAM permissions for project {project_id}: {e}")
+            logger.error(
+                f"Failed to validate IAM permissions for project {project_id}: {e}"
+            )
             # In case of error, consider all users as invalid (security)
-            all_usernames = [user.get('name') for user in iam_users if user.get('name')]
+            all_usernames = [user.get("name") for user in iam_users if user.get("name")]
             return False, all_usernames
 
     def execute_sql_safely(self, cursor, sql: str, params: Tuple = None) -> bool:
@@ -166,12 +181,15 @@ class CloudSQLUserManager:
             True if schema exists, False otherwise
         """
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT EXISTS(
                     SELECT 1 FROM information_schema.schemata 
                     WHERE schema_name = %s
                 )
-            """, (schema_name,))
+            """,
+                (schema_name,),
+            )
 
             result = cursor.fetchone()
             exists = result[0] if result else False
@@ -230,13 +248,17 @@ class CloudSQLUserManager:
         try:
             # Build list of roles to exclude (system)
             excluded_roles = [
-                'postgres', 'cloudsqlsuperuser', 'cloudsqladmin', 'cloudsqlreplica'
+                "postgres",
+                "cloudsqlsuperuser",
+                "cloudsqladmin",
+                "cloudsqlreplica",
             ]
 
             # Create placeholders for the query
-            placeholders = ','.join(['%s'] * len(excluded_roles))
+            placeholders = ",".join(["%s"] * len(excluded_roles))
 
-            cursor.execute(f"""
+            cursor.execute(
+                f"""
                 SELECT rolname FROM pg_roles 
                 WHERE rolname NOT IN ({placeholders})
                 AND rolname NOT LIKE 'cloudsql%%'
@@ -244,7 +266,9 @@ class CloudSQLUserManager:
                 AND rolname NOT LIKE 'information_schema%%'
                 AND NOT rolsuper  -- Exclude superusers
                 AND rolcanlogin = true  -- Include only login roles
-            """, excluded_roles)
+            """,
+                excluded_roles,
+            )
 
             existing_users = [row[0] for row in cursor.fetchall()]
             logger.info(f"Found {len(existing_users)} existing IAM users")
@@ -255,44 +279,66 @@ class CloudSQLUserManager:
             logger.error(f"Failed to get existing IAM users: {e}")
             return []
 
-    def revoke_all_permissions(self, cursor, username: str, database_name: str, schema_name: str) -> bool:
+    def revoke_all_permissions(
+        self, cursor, username: str, database_name: str, schema_name: str
+    ) -> bool:
         """
         Revoke all permissions from an IAM user
         """
         try:
-            logger.debug(f"Revoking all permissions for user {username} on schema {schema_name}")
+            logger.debug(
+                f"Revoking all permissions for user {username} on schema {schema_name}"
+            )
 
             # Check if schema exists before operations
             if not self.schema_exists(cursor, schema_name):
-                logger.warning(f"Schema '{schema_name}' does not exist, skipping revocation for user {username}")
+                logger.warning(
+                    f"Schema '{schema_name}' does not exist, skipping revocation for user {username}"
+                )
                 return True
 
             # Transfer ownership if necessary
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT pg_catalog.pg_get_userbyid(d.datdba) as owner 
                 FROM pg_catalog.pg_database d 
                 WHERE d.datname = %s
-            """, (database_name,))
+            """,
+                (database_name,),
+            )
 
             current_owner = cursor.fetchone()
             if current_owner and current_owner[0] == username:
                 logger.info(
-                    f"User {username} is owner of database {database_name}, transferring ownership back to postgres")
-                if not self.execute_sql_safely(cursor, f'ALTER DATABASE "{database_name}" OWNER TO postgres'):
-                    logger.warning(f"Failed to transfer database ownership from {username}")
+                    f"User {username} is owner of database {database_name}, transferring ownership back to postgres"
+                )
+                if not self.execute_sql_safely(
+                    cursor, f'ALTER DATABASE "{database_name}" OWNER TO postgres'
+                ):
+                    logger.warning(
+                        f"Failed to transfer database ownership from {username}"
+                    )
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT pg_catalog.pg_get_userbyid(n.nspowner) as owner 
                 FROM pg_catalog.pg_namespace n 
                 WHERE n.nspname = %s
-            """, (schema_name,))
+            """,
+                (schema_name,),
+            )
 
             schema_owner = cursor.fetchone()
             if schema_owner and schema_owner[0] == username:
                 logger.info(
-                    f"User {username} is owner of schema {schema_name}, transferring ownership back to postgres")
-                if not self.execute_sql_safely(cursor, f'ALTER SCHEMA "{schema_name}" OWNER TO postgres'):
-                    logger.warning(f"Failed to transfer schema ownership from {username}")
+                    f"User {username} is owner of schema {schema_name}, transferring ownership back to postgres"
+                )
+                if not self.execute_sql_safely(
+                    cursor, f'ALTER SCHEMA "{schema_name}" OWNER TO postgres'
+                ):
+                    logger.warning(
+                        f"Failed to transfer schema ownership from {username}"
+                    )
 
             # Revoke existing permissions
             revoke_commands = [
@@ -300,7 +346,7 @@ class CloudSQLUserManager:
                 f'REVOKE ALL PRIVILEGES ON SCHEMA "{schema_name}" FROM "{username}"',
                 f'REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA "{schema_name}" FROM "{username}"',
                 f'REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "{schema_name}" FROM "{username}"',
-                f'REVOKE ALL PRIVILEGES ON ALL ROUTINES IN SCHEMA "{schema_name}" FROM "{username}"'
+                f'REVOKE ALL PRIVILEGES ON ALL ROUTINES IN SCHEMA "{schema_name}" FROM "{username}"',
             ]
 
             success = True
@@ -312,7 +358,7 @@ class CloudSQLUserManager:
             default_privilege_commands = [
                 f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" REVOKE ALL PRIVILEGES ON TABLES FROM "{username}"',
                 f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" REVOKE ALL PRIVILEGES ON SEQUENCES FROM "{username}"',
-                f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" REVOKE ALL PRIVILEGES ON ROUTINES FROM "{username}"'
+                f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" REVOKE ALL PRIVILEGES ON ROUTINES FROM "{username}"',
             ]
 
             for cmd in default_privilege_commands:
@@ -322,7 +368,9 @@ class CloudSQLUserManager:
             if success:
                 logger.info(f"Successfully revoked all permissions for user {username}")
             else:
-                logger.warning(f"Some permission revocations failed for user {username}")
+                logger.warning(
+                    f"Some permission revocations failed for user {username}"
+                )
 
             return success
 
@@ -330,63 +378,73 @@ class CloudSQLUserManager:
             logger.error(f"Error revoking permissions for user {username}: {e}")
             return False
 
-    def grant_permissions(self, cursor, username: str, permission_level: str, database_name: str,
-                          schema_name: str) -> bool:
+    def grant_permissions(
+        self,
+        cursor,
+        username: str,
+        permission_level: str,
+        database_name: str,
+        schema_name: str,
+    ) -> bool:
         """
         Grant permissions according to specified level to an existing IAM user
         """
         try:
-            logger.debug(f"Granting {permission_level} permissions to user {username} on schema {schema_name}")
+            logger.debug(
+                f"Granting {permission_level} permissions to user {username} on schema {schema_name}"
+            )
 
             # Check if schema exists before granting permissions
             if not self.schema_exists(cursor, schema_name):
-                logger.error(f"Cannot grant permissions: schema '{schema_name}' does not exist")
+                logger.error(
+                    f"Cannot grant permissions: schema '{schema_name}' does not exist"
+                )
                 return False
 
             # Base permissions
             base_commands = [
                 f'GRANT CONNECT ON DATABASE "{database_name}" TO "{username}"',
-                f'GRANT USAGE ON SCHEMA "{schema_name}" TO "{username}"'
+                f'GRANT USAGE ON SCHEMA "{schema_name}" TO "{username}"',
             ]
 
             # Permissions based on level
-            if permission_level == 'admin':
+            if permission_level == "admin":
                 # For admin, make owner of database and schema
                 permission_commands = [
                     f'GRANT ALL PRIVILEGES ON DATABASE "{database_name}" TO "{username}"',
                     f'GRANT ALL PRIVILEGES ON SCHEMA "{schema_name}" TO "{username}"',
                     f'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "{schema_name}" TO "{username}"',
                     f'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}"'
+                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}"',
                 ]
                 default_privilege_commands = [
                     f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT ALL PRIVILEGES ON TABLES TO "{username}"',
                     f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT ALL PRIVILEGES ON SEQUENCES TO "{username}"',
-                    f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT EXECUTE ON ROUTINES TO "{username}"'
+                    f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT EXECUTE ON ROUTINES TO "{username}"',
                 ]
 
-            elif permission_level == 'readwrite':
+            elif permission_level == "readwrite":
                 permission_commands = base_commands + [
                     f'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "{schema_name}" TO "{username}"',
                     f'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}"'
+                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}"',
                 ]
                 default_privilege_commands = [
                     f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "{username}"',
                     f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT USAGE, SELECT ON SEQUENCES TO "{username}"',
-                    f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT EXECUTE ON ROUTINES TO "{username}"'
+                    f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT EXECUTE ON ROUTINES TO "{username}"',
                 ]
 
             else:  # readonly
                 permission_commands = base_commands + [
                     f'GRANT SELECT ON ALL TABLES IN SCHEMA "{schema_name}" TO "{username}"',
                     f'GRANT SELECT ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}"'
+                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}"',
                 ]
                 default_privilege_commands = [
                     f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT SELECT ON TABLES TO "{username}"',
                     f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT SELECT ON SEQUENCES TO "{username}"',
-                    f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT EXECUTE ON ROUTINES TO "{username}"'
+                    f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT EXECUTE ON ROUTINES TO "{username}"',
                 ]
 
             # Apply current permissions
@@ -402,7 +460,8 @@ class CloudSQLUserManager:
 
             if success:
                 logger.info(
-                    f"Successfully granted {permission_level} permissions to user {username} on schema {schema_name}")
+                    f"Successfully granted {permission_level} permissions to user {username} on schema {schema_name}"
+                )
             else:
                 logger.error(f"Failed to grant some permissions to user {username}")
 
@@ -412,8 +471,14 @@ class CloudSQLUserManager:
             logger.error(f"Error granting permissions to user {username}: {e}")
             return False
 
-    def update_user_permissions(self, cursor, username: str, permission_level: str, database_name: str,
-                                schema_name: str) -> bool:
+    def update_user_permissions(
+        self,
+        cursor,
+        username: str,
+        permission_level: str,
+        database_name: str,
+        schema_name: str,
+    ) -> bool:
         """
         Update permissions for an existing IAM user
 
@@ -437,13 +502,18 @@ class CloudSQLUserManager:
             normalized_username = self.normalize_service_account_name(username)
 
             # Check if user exists
-            cursor.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (normalized_username,))
+            cursor.execute(
+                "SELECT 1 FROM pg_roles WHERE rolname = %s", (normalized_username,)
+            )
             if cursor.fetchone() is None:
                 logger.error(
-                    f"IAM user {normalized_username} does not exist in database. Must be created via Terraform/gcloud first.")
+                    f"IAM user {normalized_username} does not exist in database. Must be created via Terraform/gcloud first."
+                )
                 return False
 
-            logger.debug(f"Updating permissions for existing IAM user {normalized_username}")
+            logger.debug(
+                f"Updating permissions for existing IAM user {normalized_username}"
+            )
 
             # Check/create schema before any operation
             if not self.create_schema_if_not_exists(cursor, schema_name):
@@ -451,11 +521,21 @@ class CloudSQLUserManager:
                 return False
 
             # 1. Clean existing permissions
-            if not self.revoke_all_permissions(cursor, normalized_username, database_name, schema_name):
-                logger.warning(f"Failed to fully revoke existing permissions for {normalized_username}, continuing...")
+            if not self.revoke_all_permissions(
+                cursor, normalized_username, database_name, schema_name
+            ):
+                logger.warning(
+                    f"Failed to fully revoke existing permissions for {normalized_username}, continuing..."
+                )
 
             # 2. Grant new permissions
-            return self.grant_permissions(cursor, normalized_username, permission_level, database_name, schema_name)
+            return self.grant_permissions(
+                cursor,
+                normalized_username,
+                permission_level,
+                database_name,
+                schema_name,
+            )
 
         except Exception as e:
             logger.error(f"Error updating permissions for user {username}: {e}")
@@ -478,15 +558,17 @@ class CloudSQLUserManager:
         - Schema will be created automatically if it doesn't exist
         """
 
-        project_id = message_data['project_id']
-        region = message_data['region']
-        instance_name = message_data['instance_name']
-        database_name = message_data['database_name']
-        schema_name = message_data['schema_name']
-        iam_users = message_data['iam_users']
+        project_id = message_data["project_id"]
+        region = message_data["region"]
+        instance_name = message_data["instance_name"]
+        database_name = message_data["database_name"]
+        schema_name = message_data["schema_name"]
+        iam_users = message_data["iam_users"]
 
         try:
-            with self.get_connection(project_id, region, instance_name, database_name) as conn:
+            with self.get_connection(
+                project_id, region, instance_name, database_name
+            ) as conn:
                 cursor = conn.cursor()
 
                 try:
@@ -500,7 +582,9 @@ class CloudSQLUserManager:
                             "database_name": database_name,
                             "schema_name": schema_name,
                             "error": f"Failed to create or verify schema '{schema_name}'",
-                            "message_id": message_data.get('_pubsub_metadata', {}).get('messageId')
+                            "message_id": message_data.get("_pubsub_metadata", {}).get(
+                                "messageId"
+                            ),
                         }
 
                     # Commit after schema creation
@@ -511,7 +595,7 @@ class CloudSQLUserManager:
 
                     # Normalize requested usernames (remove .gserviceaccount.com)
                     normalized_requested_users = {
-                        self.normalize_service_account_name(user['name']): user['name']
+                        self.normalize_service_account_name(user["name"]): user["name"]
                         for user in iam_users
                     }
                     requested_users_normalized = set(normalized_requested_users.keys())
@@ -520,19 +604,29 @@ class CloudSQLUserManager:
                     missing_users = requested_users_normalized - existing_iam_users
                     if missing_users:
                         # Convert to original emails for logging
-                        missing_emails = [normalized_requested_users[norm_user] for norm_user in missing_users]
+                        missing_emails = [
+                            normalized_requested_users[norm_user]
+                            for norm_user in missing_users
+                        ]
                         logger.warning(
-                            f"The following IAM users are missing from database (must be created via Terraform/gcloud first): {missing_emails}")
+                            f"The following IAM users are missing from database (must be created via Terraform/gcloud first): {missing_emails}"
+                        )
                         # Filter out missing users
-                        iam_users = [user for user in iam_users
-                                     if self.normalize_service_account_name(user['name']) not in missing_users]
+                        iam_users = [
+                            user
+                            for user in iam_users
+                            if self.normalize_service_account_name(user["name"])
+                            not in missing_users
+                        ]
 
                     # Existing users that are no longer requested (permissions to revoke)
                     users_to_revoke = existing_iam_users - requested_users_normalized
 
-                    logger.info(f"Processing permissions for {len(iam_users)} IAM users, "
-                                f"revoking permissions for {len(users_to_revoke)} users, "
-                                f"skipping {len(missing_users)} missing users")
+                    logger.info(
+                        f"Processing permissions for {len(iam_users)} IAM users, "
+                        f"revoking permissions for {len(users_to_revoke)} users, "
+                        f"skipping {len(missing_users)} missing users"
+                    )
 
                     success_count = 0
                     error_count = 0
@@ -541,52 +635,74 @@ class CloudSQLUserManager:
 
                     # Process requested users (update permissions)
                     for user in iam_users:
-                        username = user['name']
-                        permission_level = user['permission_level']
+                        username = user["name"]
+                        permission_level = user["permission_level"]
 
                         try:
                             # Intermediate commit for each user
                             conn.commit()
 
-                            if self.update_user_permissions(cursor, username, permission_level, database_name,
-                                                            schema_name):
+                            if self.update_user_permissions(
+                                cursor,
+                                username,
+                                permission_level,
+                                database_name,
+                                schema_name,
+                            ):
                                 success_count += 1
                                 conn.commit()
-                                logger.info(f"Successfully updated permissions for user {username}")
+                                logger.info(
+                                    f"Successfully updated permissions for user {username}"
+                                )
                             else:
                                 error_count += 1
                                 conn.rollback()
-                                logger.error(f"Failed to update permissions for user {username}")
+                                logger.error(
+                                    f"Failed to update permissions for user {username}"
+                                )
 
                         except Exception as e:
-                            logger.error(f"Error processing permissions for user {username}: {e}")
+                            logger.error(
+                                f"Error processing permissions for user {username}: {e}"
+                            )
                             error_count += 1
                             try:
                                 conn.rollback()
                             except Exception as rollback_err:
-                                logger.warning(f"Rollback failed for user {username}: {rollback_err}")
+                                logger.warning(
+                                    f"Rollback failed for user {username}: {rollback_err}"
+                                )
 
                     # Revoke permissions for users that are no longer requested
                     for normalized_username in users_to_revoke:
                         try:
                             conn.commit()
-                            if self.revoke_all_permissions(cursor, normalized_username, database_name, schema_name):
+                            if self.revoke_all_permissions(
+                                cursor, normalized_username, database_name, schema_name
+                            ):
                                 revoke_success_count += 1
-                                logger.info(f"Revoked all permissions for user {normalized_username}")
+                                logger.info(
+                                    f"Revoked all permissions for user {normalized_username}"
+                                )
                                 conn.commit()
                             else:
                                 revoke_error_count += 1
                                 conn.rollback()
-                                logger.error(f"Failed to revoke permissions for user {normalized_username}")
+                                logger.error(
+                                    f"Failed to revoke permissions for user {normalized_username}"
+                                )
 
                         except Exception as e:
-                            logger.error(f"Error revoking permissions for user {normalized_username}: {e}")
+                            logger.error(
+                                f"Error revoking permissions for user {normalized_username}: {e}"
+                            )
                             revoke_error_count += 1
                             try:
                                 conn.rollback()
                             except Exception as rollback_err:
                                 logger.warning(
-                                    f"Rollback failed for user revocation {normalized_username}: {rollback_err}")
+                                    f"Rollback failed for user revocation {normalized_username}: {rollback_err}"
+                                )
 
                     # Final commit
                     conn.commit()
@@ -601,23 +717,33 @@ class CloudSQLUserManager:
                         "users_processed": success_count,
                         "permissions_revoked": revoke_success_count,
                         "missing_users_count": len(missing_users),
-                        "missing_users": [normalized_requested_users.get(user, user) for user in missing_users],
+                        "missing_users": [
+                            normalized_requested_users.get(user, user)
+                            for user in missing_users
+                        ],
                         "permission_errors": error_count,
                         "revoke_errors": revoke_error_count,
                         "total_errors": error_count + revoke_error_count,
-                        "message_id": message_data.get('_pubsub_metadata', {}).get('messageId')
+                        "message_id": message_data.get("_pubsub_metadata", {}).get(
+                            "messageId"
+                        ),
                     }
 
                     # Add warnings if necessary
                     warnings = []
                     if missing_users:
-                        missing_emails = [normalized_requested_users.get(user, user) for user in missing_users]
+                        missing_emails = [
+                            normalized_requested_users.get(user, user)
+                            for user in missing_users
+                        ]
                         warning_msg = f"Some IAM users were missing from database: {missing_emails}"
                         warnings.append(warning_msg)
                         logger.warning(warning_msg)
 
                     if error_count > 0:
-                        warning_msg = f"Failed to update permissions for {error_count} users"
+                        warning_msg = (
+                            f"Failed to update permissions for {error_count} users"
+                        )
                         warnings.append(warning_msg)
 
                     if revoke_error_count > 0:
@@ -627,7 +753,9 @@ class CloudSQLUserManager:
                     if warnings:
                         result["warnings"] = warnings
 
-                    logger.info(f"Successfully processed IAM user permissions: {result}")
+                    logger.info(
+                        f"Successfully processed IAM user permissions: {result}"
+                    )
                     return result
 
                 except Exception as e:
@@ -639,7 +767,9 @@ class CloudSQLUserManager:
                     raise e
 
         except Exception as e:
-            logger.error(f"Failed to process IAM user permissions for {project_id}/{instance_name}: {e}")
+            logger.error(
+                f"Failed to process IAM user permissions for {project_id}/{instance_name}: {e}"
+            )
             return {
                 "success": False,
                 "project_id": project_id,
@@ -647,7 +777,7 @@ class CloudSQLUserManager:
                 "database_name": database_name,
                 "schema_name": schema_name,
                 "error": str(e),
-                "message_id": message_data.get('_pubsub_metadata', {}).get('messageId')
+                "message_id": message_data.get("_pubsub_metadata", {}).get("messageId"),
             }
 
     def close(self):

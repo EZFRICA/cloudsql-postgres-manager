@@ -42,7 +42,7 @@ app = FastAPI(
     - Automatic cleanup of permissions for removed users
     """,
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
@@ -56,7 +56,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         service="Cloud SQL IAM User Permission Manager",
-        version="4.0.0"
+        version="4.0.0",
     )
 
 
@@ -97,8 +97,7 @@ async def handle_pubsub(request: Request):
         if not request_json:
             logger.error("Empty request payload")
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Empty request payload"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Empty request payload"
             )
 
         try:
@@ -107,7 +106,7 @@ async def handle_pubsub(request: Request):
             logger.error(f"Invalid Pub/Sub message format: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid message format: {str(e)}"
+                detail=f"Invalid message format: {str(e)}",
             )
 
         # Validate message schema
@@ -117,39 +116,44 @@ async def handle_pubsub(request: Request):
             logger.error(f"Invalid message schema: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid message schema: {str(e)}"
+                detail=f"Invalid message schema: {str(e)}",
             )
 
         # Log processing information (without sensitive data)
-        logger.info(f"Processing IAM user permissions for project: {validated_data['project_id']}, "
-                    f"instance: {validated_data['instance_name']}, "
-                    f"database: {validated_data['database_name']}, "
-                    f"schema: {validated_data['schema_name']}, "
-                    f"region: {validated_data['region']}, "
-                    f"users: {len(validated_data['iam_users'])}")
+        logger.info(
+            f"Processing IAM user permissions for project: {validated_data['project_id']}, "
+            f"instance: {validated_data['instance_name']}, "
+            f"database: {validated_data['database_name']}, "
+            f"schema: {validated_data['schema_name']}, "
+            f"region: {validated_data['region']}, "
+            f"users: {len(validated_data['iam_users'])}"
+        )
 
         # Check if there are users to process or revocations to perform
-        if not validated_data['iam_users']:
-            logger.info("No IAM users specified in message - will revoke permissions for all existing users")
+        if not validated_data["iam_users"]:
+            logger.info(
+                "No IAM users specified in message - will revoke permissions for all existing users"
+            )
 
         # Validate IAM permissions for specified users
-        if validated_data['iam_users']:
+        if validated_data["iam_users"]:
             permissions_valid, invalid_users = user_manager.validate_iam_permissions(
-                validated_data['project_id'],
-                validated_data['iam_users']
+                validated_data["project_id"], validated_data["iam_users"]
             )
 
             if not permissions_valid:
                 # Filter out invalid users
-                original_count = len(validated_data['iam_users'])
-                validated_data['iam_users'] = [
-                    user for user in validated_data['iam_users']
-                    if user['name'] not in invalid_users
+                original_count = len(validated_data["iam_users"])
+                validated_data["iam_users"] = [
+                    user
+                    for user in validated_data["iam_users"]
+                    if user["name"] not in invalid_users
                 ]
 
                 logger.warning(
                     f"Proceeding with {len(validated_data['iam_users'])} valid users out of {original_count}, "
-                    f"skipping {len(invalid_users)} users with invalid IAM permissions")
+                    f"skipping {len(invalid_users)} users with invalid IAM permissions"
+                )
 
         # Process IAM user permissions
         result = user_manager.process_users(validated_data)
@@ -157,17 +161,21 @@ async def handle_pubsub(request: Request):
         if result["success"]:
             # Success even with partial errors
             total_errors = result.get("total_errors", 0)
-            message_id = result.get('message_id', 'unknown')
+            message_id = result.get("message_id", "unknown")
 
             if total_errors > 0:
-                logger.warning(f"Processed Pub/Sub message {message_id} with {total_errors} errors")
+                logger.warning(
+                    f"Processed Pub/Sub message {message_id} with {total_errors} errors"
+                )
             else:
                 logger.info(f"Successfully processed Pub/Sub message: {message_id}")
 
             # Return 204 No Content to indicate success to Pub/Sub
             return None
         else:
-            logger.error(f"Failed to process IAM user permissions: {result.get('error', 'Unknown error')}")
+            logger.error(
+                f"Failed to process IAM user permissions: {result.get('error', 'Unknown error')}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=ErrorResponse(
@@ -176,9 +184,9 @@ async def handle_pubsub(request: Request):
                         "project_id": result.get("project_id"),
                         "instance_name": result.get("instance_name"),
                         "database_name": result.get("database_name"),
-                        "schema_name": result.get("schema_name")
-                    }
-                ).dict()
+                        "schema_name": result.get("schema_name"),
+                    },
+                ).dict(),
             )
 
     except HTTPException:
@@ -186,14 +194,13 @@ async def handle_pubsub(request: Request):
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON in request: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid JSON format"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format"
         )
     except Exception as e:
         logger.error(f"Unexpected error processing Pub/Sub message: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {str(e)}"
+            detail=f"Internal server error: {str(e)}",
         )
 
 
@@ -210,44 +217,51 @@ async def manage_users_direct(request: IAMUserRequest):
     try:
         # Convert Pydantic model to dict format expected by process_users
         message_data = {
-            'project_id': request.project_id,
-            'instance_name': request.instance_name,
-            'database_name': request.database_name,
-            'region': request.region,
-            'schema_name': request.schema_name or f"{request.database_name}_schema",
-            'iam_users': [user.dict() for user in request.iam_users]
+            "project_id": request.project_id,
+            "instance_name": request.instance_name,
+            "database_name": request.database_name,
+            "region": request.region,
+            "schema_name": request.schema_name or f"{request.database_name}_schema",
+            "iam_users": [user.dict() for user in request.iam_users],
         }
 
-        logger.info(f"Direct API request for IAM user permissions - project: {request.project_id}, "
-                    f"instance: {request.instance_name}, users: {len(request.iam_users)}")
+        logger.info(
+            f"Direct API request for IAM user permissions - project: {request.project_id}, "
+            f"instance: {request.instance_name}, users: {len(request.iam_users)}"
+        )
 
         # Validate IAM permissions for specified users
-        if message_data['iam_users']:
+        if message_data["iam_users"]:
             permissions_valid, invalid_users = user_manager.validate_iam_permissions(
-                message_data['project_id'],
-                message_data['iam_users']
+                message_data["project_id"], message_data["iam_users"]
             )
 
             if not permissions_valid:
                 # Filter out invalid users
-                original_count = len(message_data['iam_users'])
-                message_data['iam_users'] = [
-                    user for user in message_data['iam_users']
-                    if user['name'] not in invalid_users
+                original_count = len(message_data["iam_users"])
+                message_data["iam_users"] = [
+                    user
+                    for user in message_data["iam_users"]
+                    if user["name"] not in invalid_users
                 ]
 
                 logger.warning(
                     f"Proceeding with {len(message_data['iam_users'])} valid users out of {original_count}, "
-                    f"skipping {len(invalid_users)} users with invalid IAM permissions")
+                    f"skipping {len(invalid_users)} users with invalid IAM permissions"
+                )
 
         # Process IAM user permissions
         result = user_manager.process_users(message_data)
 
         if result["success"]:
-            logger.info(f"Successfully processed direct API request for {request.project_id}/{request.instance_name}")
+            logger.info(
+                f"Successfully processed direct API request for {request.project_id}/{request.instance_name}"
+            )
             return result
         else:
-            logger.error(f"Failed to process IAM user permissions: {result.get('error', 'Unknown error')}")
+            logger.error(
+                f"Failed to process IAM user permissions: {result.get('error', 'Unknown error')}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=ErrorResponse(
@@ -256,16 +270,16 @@ async def manage_users_direct(request: IAMUserRequest):
                         "project_id": result.get("project_id"),
                         "instance_name": result.get("instance_name"),
                         "database_name": result.get("database_name"),
-                        "schema_name": result.get("schema_name")
-                    }
-                ).dict()
+                        "schema_name": result.get("schema_name"),
+                    },
+                ).dict(),
             )
 
     except Exception as e:
         logger.error(f"Unexpected error in direct API: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal server error: {str(e)}"
+            detail=f"Internal server error: {str(e)}",
         )
 
 
@@ -274,8 +288,7 @@ async def manage_users_direct(request: IAMUserRequest):
 async def not_found_handler(request: Request, exc):
     """Handler for 404 errors"""
     return JSONResponse(
-        status_code=404,
-        content=ErrorResponse(error="Endpoint not found").dict()
+        status_code=404, content=ErrorResponse(error="Endpoint not found").dict()
     )
 
 
@@ -283,8 +296,7 @@ async def not_found_handler(request: Request, exc):
 async def method_not_allowed_handler(request: Request, exc):
     """Handler for 405 errors"""
     return JSONResponse(
-        status_code=405,
-        content=ErrorResponse(error="Method not allowed").dict()
+        status_code=405, content=ErrorResponse(error="Method not allowed").dict()
     )
 
 
@@ -294,7 +306,6 @@ async def validation_error_handler(request: Request, exc: ValidationError):
     return JSONResponse(
         status_code=422,
         content=ErrorResponse(
-            error="Validation error",
-            details={"validation_errors": exc.errors()}
-        ).dict()
+            error="Validation error", details={"validation_errors": exc.errors()}
+        ).dict(),
     )

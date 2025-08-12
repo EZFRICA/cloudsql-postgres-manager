@@ -4,24 +4,27 @@ from google.cloud import secretmanager_v1
 from google.api_core.exceptions import NotFound, PermissionDenied
 from .logging_config import logger
 
-SECRET_NAME_SUFFIX = os.environ.get('SECRET_NAME_SUFFIX', 'postgres-password')
+SECRET_NAME_SUFFIX = os.environ.get("SECRET_NAME_SUFFIX", "postgres-password")
 
-def access_regional_secret(project_id: str, instance_name: str, region: str, version: str = "latest") -> str:
+
+def access_regional_secret(
+    project_id: str, instance_name: str, region: str, version: str = "latest"
+) -> str:
     """
-      Retrieve a secret from Secret Manager (global or regional)
+    Retrieve a secret from Secret Manager (global or regional)
 
-      Args:
-          project_id: GCP project ID
-          secret_name: Secret name (without project prefix)
-          version: Secret version (default: "latest")
-          region: Secret region (optional, uses self.region if defined)
+    Args:
+        project_id: GCP project ID
+        secret_name: Secret name (without project prefix)
+        version: Secret version (default: "latest")
+        region: Secret region (optional, uses self.region if defined)
 
-      Returns:
-          The decoded secret value
+    Returns:
+        The decoded secret value
 
-      Raises:
-          ValueError: If the secret cannot be retrieved
-      """
+    Raises:
+        ValueError: If the secret cannot be retrieved
+    """
     try:
         # Regional secret
         secret_id = f"{instance_name}-{SECRET_NAME_SUFFIX}"

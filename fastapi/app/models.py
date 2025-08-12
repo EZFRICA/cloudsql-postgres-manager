@@ -3,21 +3,28 @@ from pydantic import BaseModel, Field
 
 
 class IAMUser(BaseModel):
-    name: str = Field(..., description="IAM user email (e.g., user@project.iam.gserviceaccount.com)")
-    permission_level: str = Field(default="readonly", description="Permission level: readonly, readwrite, or admin")
+    name: str = Field(
+        ..., description="IAM user email (e.g., user@project.iam.gserviceaccount.com)"
+    )
+    permission_level: str = Field(
+        default="readonly",
+        description="Permission level: readonly, readwrite, or admin",
+    )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "name": "my-service@project.iam.gserviceaccount.com",
-                "permission_level": "readonly"
+                "permission_level": "readonly",
             }
         }
 
 
 class PubSubMessage(BaseModel):
     data: str = Field(..., description="Base64-encoded JSON data")
-    attributes: Optional[Dict[str, str]] = Field(default={}, description="Message attributes")
+    attributes: Optional[Dict[str, str]] = Field(
+        default={}, description="Message attributes"
+    )
     messageId: Optional[str] = Field(default=None, description="Pub/Sub message ID")
     publishTime: Optional[str] = Field(default=None, description="Publish timestamp")
 
@@ -31,8 +38,12 @@ class IAMUserRequest(BaseModel):
     instance_name: str = Field(..., description="Cloud SQL instance name")
     database_name: str = Field(..., description="Database name")
     region: str = Field(..., description="GCP region")
-    schema_name: Optional[str] = Field(default=None, description="Schema name (defaults to {database_name}_schema)")
-    iam_users: List[IAMUser] = Field(default=[], description="List of IAM users to manage")
+    schema_name: Optional[str] = Field(
+        default=None, description="Schema name (defaults to {database_name}_schema)"
+    )
+    iam_users: List[IAMUser] = Field(
+        default=[], description="List of IAM users to manage"
+    )
 
     class Config:
         json_schema_extra = {
@@ -45,9 +56,9 @@ class IAMUserRequest(BaseModel):
                 "iam_users": [
                     {
                         "name": "service-account@project.iam.gserviceaccount.com",
-                        "permission_level": "readonly"
+                        "permission_level": "readonly",
                     }
-                ]
+                ],
             }
         }
 
@@ -60,4 +71,4 @@ class HealthResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: str
-    details: Optional[Dict] = None 
+    details: Optional[Dict] = None

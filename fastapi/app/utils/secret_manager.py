@@ -3,9 +3,12 @@ from google.cloud import secretmanager_v1
 from google.api_core.exceptions import NotFound, PermissionDenied
 from .logging_config import logger
 
-SECRET_NAME_SUFFIX = os.environ.get('SECRET_NAME_SUFFIX', 'postgres-password')
+SECRET_NAME_SUFFIX = os.environ.get("SECRET_NAME_SUFFIX", "postgres-password")
 
-def access_regional_secret(project_id: str, instance_name: str, region: str, version: str = "latest") -> str:
+
+def access_regional_secret(
+    project_id: str, instance_name: str, region: str, version: str = "latest"
+) -> str:
     """
     Retrieve a secret from Secret Manager (global or regional)
 
@@ -65,4 +68,4 @@ def access_regional_secret(project_id: str, instance_name: str, region: str, ver
     except Exception as e:
         error_message = f"An unexpected error occurred: {e}"
         logger.error(error_message)
-        raise ValueError(error_message) from e 
+        raise ValueError(error_message) from e
