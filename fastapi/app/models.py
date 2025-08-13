@@ -12,11 +12,12 @@ from pydantic import BaseModel, Field
 class IAMUser(BaseModel):
     """
     Model representing an IAM user with permission level.
-    
+
     Attributes:
         name: IAM user email address
         permission_level: Access level (readonly, readwrite, admin)
     """
+
     name: str = Field(
         ..., description="IAM user email (e.g., user@project.iam.gserviceaccount.com)"
     )
@@ -37,13 +38,14 @@ class IAMUser(BaseModel):
 class PubSubMessage(BaseModel):
     """
     Model for Pub/Sub message structure.
-    
+
     Attributes:
         data: Base64-encoded JSON data
         attributes: Optional message attributes
         messageId: Unique message identifier
         publishTime: Message publication timestamp
     """
+
     data: str = Field(..., description="Base64-encoded JSON data")
     attributes: Optional[Dict[str, str]] = Field(
         default={}, description="Message attributes"
@@ -55,17 +57,18 @@ class PubSubMessage(BaseModel):
 class PubSubRequest(BaseModel):
     """
     Wrapper for Pub/Sub message requests.
-    
+
     Attributes:
         message: The actual Pub/Sub message
     """
+
     message: PubSubMessage
 
 
 class IAMUserRequest(BaseModel):
     """
     Model for IAM user permission management requests.
-    
+
     Attributes:
         project_id: GCP project identifier
         instance_name: Cloud SQL instance name
@@ -74,6 +77,7 @@ class IAMUserRequest(BaseModel):
         schema_name: Optional schema name
         iam_users: List of users to manage
     """
+
     project_id: str = Field(..., description="GCP project ID")
     instance_name: str = Field(..., description="Cloud SQL instance name")
     database_name: str = Field(..., description="Database name")
@@ -106,12 +110,13 @@ class IAMUserRequest(BaseModel):
 class HealthResponse(BaseModel):
     """
     Health check response model.
-    
+
     Attributes:
         status: Service health status
         service: Service name
         version: Service version
     """
+
     status: str
     service: str
     version: str
@@ -120,10 +125,11 @@ class HealthResponse(BaseModel):
 class ErrorResponse(BaseModel):
     """
     Error response model.
-    
+
     Attributes:
         error: Error message
         details: Optional additional error details
     """
+
     error: str
     details: Optional[Dict] = None

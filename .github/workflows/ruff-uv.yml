@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.13"]
     
     steps:
     - name: Checkout code
@@ -47,4 +47,4 @@ jobs:
         uv run ruff format --check .
     
     - name: Show Ruff version
-      run: uv run ruff --version 
+      run: uv run ruff --version
