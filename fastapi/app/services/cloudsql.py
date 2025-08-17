@@ -169,7 +169,9 @@ class CloudSQLUserManager:
             logger.error(f"SQL execution failed: {sql[:100]}... Error: {str(e)}")
             return False
 
-    def ensure_postgres_grant_options(self, cursor, schema_name: str, database_name: str) -> bool:
+    def ensure_postgres_grant_options(
+        self, cursor, schema_name: str, database_name: str
+    ) -> bool:
         """
         Ensure postgres has GRANT OPTION on all objects in schema and database
         This is CRITICAL for revocation to work in Cloud SQL
@@ -183,7 +185,9 @@ class CloudSQLUserManager:
             True if successful, False otherwise
         """
         try:
-            logger.info(f"Ensuring postgres has GRANT OPTION on schema '{schema_name}' and database '{database_name}'")
+            logger.info(
+                f"Ensuring postgres has GRANT OPTION on schema '{schema_name}' and database '{database_name}'"
+            )
 
             # Now grant permissions WITH GRANT OPTION
             grant_commands = [
@@ -195,16 +199,22 @@ class CloudSQLUserManager:
 
             # Add database-level privileges if database_name is provided
             if database_name:
-                logger.info(f"Ensuring postgres has GRANT OPTION on database '{database_name}'")
-                grant_commands.extend([
-                    f'GRANT ALL PRIVILEGES ON DATABASE "{database_name}" TO postgres WITH GRANT OPTION',
-                ])
-                
+                logger.info(
+                    f"Ensuring postgres has GRANT OPTION on database '{database_name}'"
+                )
+                grant_commands.extend(
+                    [
+                        f'GRANT ALL PRIVILEGES ON DATABASE "{database_name}" TO postgres WITH GRANT OPTION',
+                    ]
+                )
+
                 # Also ensure postgres owns the database and schema for full control
-                grant_commands.extend([
-                    f'ALTER DATABASE "{database_name}" OWNER TO postgres',
-                    f'ALTER SCHEMA "{schema_name}" OWNER TO postgres',
-                ])
+                grant_commands.extend(
+                    [
+                        f'ALTER DATABASE "{database_name}" OWNER TO postgres',
+                        f'ALTER SCHEMA "{schema_name}" OWNER TO postgres',
+                    ]
+                )
 
             success = True
 
@@ -228,14 +238,20 @@ class CloudSQLUserManager:
                     success = False
 
             if success:
-                logger.info(f"Successfully ensured postgres has clean GRANT OPTION on schema '{schema_name}' and database '{database_name}'")
+                logger.info(
+                    f"Successfully ensured postgres has clean GRANT OPTION on schema '{schema_name}' and database '{database_name}'"
+                )
             else:
-                logger.warning("Some commands failed while ensuring GRANT OPTION for postgres")
+                logger.warning(
+                    "Some commands failed while ensuring GRANT OPTION for postgres"
+                )
 
             return success
 
         except Exception as e:
-            logger.error(f"Error ensuring postgres GRANT OPTION on schema '{schema_name}': {e}")
+            logger.error(
+                f"Error ensuring postgres GRANT OPTION on schema '{schema_name}': {e}"
+            )
             return False
 
     def schema_exists(self, cursor, schema_name: str) -> bool:
@@ -269,7 +285,9 @@ class CloudSQLUserManager:
             logger.error(f"Failed to check schema existence for '{schema_name}': {e}")
             return False
 
-    def create_schema_if_not_exists(self, cursor, schema_name: str, database_name: str) -> bool:
+    def create_schema_if_not_exists(
+        self, cursor, schema_name: str, database_name: str
+    ) -> bool:
         """
         Create schema if it doesn't exist
 
@@ -296,8 +314,12 @@ class CloudSQLUserManager:
 
             # CRITICAL: Ensure postgres has GRANT OPTION on the new schema and database
             # This is needed so that postgres can later REVOKE permissions from users
-            if not self.ensure_postgres_grant_options(cursor, schema_name, database_name):
-                logger.error(f"Failed to ensure postgres has GRANT OPTION on schema '{schema_name}' and database '{database_name}'")
+            if not self.ensure_postgres_grant_options(
+                cursor, schema_name, database_name
+            ):
+                logger.error(
+                    f"Failed to ensure postgres has GRANT OPTION on schema '{schema_name}' and database '{database_name}'"
+                )
                 return False
 
             return True
@@ -362,7 +384,7 @@ class CloudSQLUserManager:
         """
         Revoke all permissions from an IAM user
         Note: postgres must already have GRANT OPTION (ensured during schema creation)
-        
+
         Args:
             cursor: Database cursor
             username: Username to revoke permissions from
@@ -425,18 +447,18 @@ class CloudSQLUserManager:
                     )
 
             success = True
-        
+
             # Try to revoke database and schema permissions (these work in Cloud SQL)
             basic_revoke_commands = [
                 f'REVOKE ALL PRIVILEGES ON DATABASE "{database_name}" FROM "{username}"',
                 f'REVOKE ALL PRIVILEGES ON SCHEMA "{schema_name}" FROM "{username}"',
             ]
-            
+
             for cmd in basic_revoke_commands:
                 if not self.execute_sql_safely(cursor, cmd):
                     logger.warning(f"Failed to revoke basic permissions: {cmd}")
                     success = False
-            
+
             if success:
                 logger.info(f"Successfully revoked all permissions for user {username}")
             else:
@@ -445,7 +467,7 @@ class CloudSQLUserManager:
                 )
 
             return success
-            
+
         except Exception as e:
             logger.error(f"Error revoking permissions for user {username}: {e}")
             return False
@@ -646,7 +668,9 @@ class CloudSQLUserManager:
                 try:
                     # Check/create schema first
                     logger.info(f"Verifying schema '{schema_name}' existence")
-                    if not self.create_schema_if_not_exists(cursor, schema_name, database_name):
+                    if not self.create_schema_if_not_exists(
+                        cursor, schema_name, database_name
+                    ):
                         return {
                             "success": False,
                             "project_id": project_id,
