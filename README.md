@@ -131,6 +131,7 @@ docker run -p 8080:8080 \
 
 ### Step 4: Manage IAM User Permissions
 
+#### Basic User Management
 ```bash
 # Create JSON file with user data
 cat > user-management.json << 'EOF'
@@ -356,6 +357,22 @@ curl -X POST http://localhost:8080/manage-users \
 Once the service is running, visit:
 - Swagger UI: `http://localhost:8080/docs`
 - ReDoc: `http://localhost:8080/redoc`
+
+### Customization and Extensions
+
+The project includes a `pseudocode/` directory with examples and guides for customizing the default behavior:
+
+- **`pseudocode/README.md`**: Overview of customization approaches
+- **`pseudocode/revoke_object_permissions.md`**: Examples for custom permission revocation logic
+
+These pseudocode examples demonstrate how to:
+- Implement role-based permission strategies
+- Add audit trails and logging
+- Create conditional permission logic
+- Integrate with external systems
+- Optimize performance for specific use cases
+
+See the `pseudocode/` directory for detailed implementation examples and best practices.
 
 ## 🤝 Contributing
 
