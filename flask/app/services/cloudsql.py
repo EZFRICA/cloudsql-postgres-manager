@@ -169,90 +169,7 @@ class CloudSQLUserManager:
             logger.error(f"SQL execution failed: {sql[:100]}... Error: {str(e)}")
             return False
 
-    def ensure_postgres_grant_options(
-        self, cursor, schema_name: str, database_name: str
-    ) -> bool:
-        """
-        Ensure postgres has GRANT OPTION on all objects in schema and database
-        This is CRITICAL for revocation to work in Cloud SQL
 
-        Args:
-            cursor: Database cursor
-            schema_name: Schema name
-            database_name: Database name (required, for database-level privileges)
-
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            logger.info(
-                f"Ensuring postgres has GRANT OPTION on schema '{schema_name}' and database '{database_name}'"
-            )
-
-            # Now grant permissions WITH GRANT OPTION
-            grant_commands = [
-                f'GRANT ALL PRIVILEGES ON SCHEMA "{schema_name}" TO postgres WITH GRANT OPTION',
-                f'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "{schema_name}" TO postgres WITH GRANT OPTION',
-                f'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO postgres WITH GRANT OPTION',
-                f'GRANT ALL PRIVILEGES ON ALL ROUTINES IN SCHEMA "{schema_name}" TO postgres WITH GRANT OPTION',
-            ]
-
-            # Add database-level privileges if database_name is provided
-            if database_name:
-                logger.info(
-                    f"Ensuring postgres has GRANT OPTION on database '{database_name}'"
-                )
-                grant_commands.extend(
-                    [
-                        f'GRANT ALL PRIVILEGES ON DATABASE "{database_name}" TO postgres WITH GRANT OPTION',
-                    ]
-                )
-
-                # Also ensure postgres owns the database and schema for full control
-                grant_commands.extend(
-                    [
-                        f'ALTER DATABASE "{database_name}" OWNER TO postgres',
-                        f'ALTER SCHEMA "{schema_name}" OWNER TO postgres',
-                    ]
-                )
-
-            success = True
-
-            # Apply grants on existing objects
-            for cmd in grant_commands:
-                if not self.execute_sql_safely(cursor, cmd):
-                    logger.warning(f"Failed to execute: {cmd}")
-                    success = False
-
-            # Set default privileges for future objects
-            default_privilege_commands = [
-                f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT ALL ON TABLES TO postgres WITH GRANT OPTION',
-                f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT ALL ON SEQUENCES TO postgres WITH GRANT OPTION',
-                f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT ALL ON ROUTINES TO postgres WITH GRANT OPTION',
-            ]
-
-            # Apply default privileges for new objects
-            for cmd in default_privilege_commands:
-                if not self.execute_sql_safely(cursor, cmd):
-                    logger.warning(f"Failed to execute: {cmd}")
-                    success = False
-
-            if success:
-                logger.info(
-                    f"Successfully ensured postgres has clean GRANT OPTION on schema '{schema_name}' and database '{database_name}'"
-                )
-            else:
-                logger.warning(
-                    "Some commands failed while ensuring GRANT OPTION for postgres"
-                )
-
-            return success
-
-        except Exception as e:
-            logger.error(
-                f"Error ensuring postgres GRANT OPTION on schema '{schema_name}': {e}"
-            )
-            return False
 
     def schema_exists(self, cursor, schema_name: str) -> bool:
         """
@@ -311,16 +228,6 @@ class CloudSQLUserManager:
                 return False
 
             logger.info(f"Successfully created schema '{schema_name}'")
-
-            # CRITICAL: Ensure postgres has GRANT OPTION on the new schema and database
-            # This is needed so that postgres can later REVOKE permissions from users
-            if not self.ensure_postgres_grant_options(
-                cursor, schema_name, database_name
-            ):
-                logger.error(
-                    f"Failed to ensure postgres has GRANT OPTION on schema '{schema_name}' and database '{database_name}'"
-                )
-                return False
 
             return True
 
@@ -448,10 +355,34 @@ class CloudSQLUserManager:
 
             success = True
 
-            # Try to revoke database and schema permissions (these work in Cloud SQL)
+            # Revoke all default privileges that were set
+            default_privilege_commands = [
+                f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" REVOKE ALL PRIVILEGES ON TABLES FROM "{username}"',
+                f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" REVOKE ALL PRIVILEGES ON SEQUENCES FROM "{username}"',
+                f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" REVOKE EXECUTE ON ROUTINES FROM "{username}"',
+            ]
+
+            for cmd in default_privilege_commands:
+                if not self.execute_sql_safely(cursor, cmd):
+                    logger.warning(f"Failed to revoke default privileges: {cmd}")
+                    success = False
+
+            # Revoke permissions on all existing objects in the schema
+            object_revoke_commands = [
+                f'REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA "{schema_name}" FROM "{username}"',
+                f'REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "{schema_name}" FROM "{username}"',
+                f'REVOKE EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" FROM "{username}"',
+            ]
+
+            for cmd in object_revoke_commands:
+                if not self.execute_sql_safely(cursor, cmd):
+                    logger.warning(f"Failed to revoke object permissions: {cmd}")
+                    success = False
+
+            # Revoke schema and database level permissions
             basic_revoke_commands = [
-                f'REVOKE ALL PRIVILEGES ON DATABASE "{database_name}" FROM "{username}"',
                 f'REVOKE ALL PRIVILEGES ON SCHEMA "{schema_name}" FROM "{username}"',
+                f'REVOKE ALL PRIVILEGES ON DATABASE "{database_name}" FROM "{username}"',
             ]
 
             for cmd in basic_revoke_commands:
@@ -459,6 +390,19 @@ class CloudSQLUserManager:
                     logger.warning(f"Failed to revoke basic permissions: {cmd}")
                     success = False
 
+            # Revoke specific permissions that might have been granted individually
+            specific_revoke_commands = [
+                f'REVOKE CONNECT ON DATABASE "{database_name}" FROM "{username}"',
+                f'REVOKE USAGE ON SCHEMA "{schema_name}" FROM "{username}"',
+                f'REVOKE SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "{schema_name}" FROM "{username}"',
+                f'REVOKE USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "{schema_name}" FROM "{username}"',
+            ]
+
+            for cmd in specific_revoke_commands:
+                if not self.execute_sql_safely(cursor, cmd):
+                    logger.warning(f"Failed to revoke specific permissions: {cmd}")
+                    success = False
+                    
             if success:
                 logger.info(f"Successfully revoked all permissions for user {username}")
             else:
@@ -470,6 +414,56 @@ class CloudSQLUserManager:
 
         except Exception as e:
             logger.error(f"Error revoking permissions for user {username}: {e}")
+            return False
+
+    def ensure_postgres_inherits_iam_permissions(
+        self, cursor, username: str
+    ) -> bool:
+        """
+        Ensure postgres inherits permissions from an IAM user
+        This allows postgres to REVOKE permissions from this user later
+        
+        Args:
+            cursor: Database cursor
+            username: IAM username to grant permissions to postgres
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            logger.info(f"Ensuring postgres inherits permissions from user {username}")
+            
+            # Normalize the username (remove .gserviceaccount.com suffix if present)
+            normalized_username = self.normalize_service_account_name(username)
+            
+            # Check if postgres already inherits permissions from this user
+            check_query = """
+                SELECT 1 FROM pg_roles r1
+                JOIN pg_auth_members m ON r1.oid = m.member
+                JOIN pg_roles r2 ON m.roleid = r2.oid
+                WHERE r1.rolname = 'postgres' 
+                AND r2.rolname = %s
+            """
+            
+            cursor.execute(check_query, (normalized_username,))
+            already_inherits = cursor.fetchone() is not None
+            
+            if already_inherits:
+                logger.info(f"postgres already inherits permissions from {normalized_username}, skipping GRANT")
+                return True
+            
+            # Grant the IAM user TO postgres so postgres can inherit their permissions
+            grant_command = f'GRANT "{normalized_username}" TO postgres'
+            
+            if self.execute_sql_safely(cursor, grant_command):
+                logger.info(f"Successfully granted {normalized_username} TO postgres")
+                return True
+            else:
+                logger.warning(f"Failed to grant {normalized_username} TO postgres")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error ensuring postgres inherits permissions from {username}: {e}")
             return False
 
     def grant_permissions(
@@ -497,19 +491,19 @@ class CloudSQLUserManager:
 
             # Basic permissions
             base_commands = [
-                f'GRANT CONNECT ON DATABASE "{database_name}" TO "{username}"',
-                f'GRANT USAGE ON SCHEMA "{schema_name}" TO "{username}"',
+                f'GRANT CONNECT ON DATABASE "{database_name}" TO "{username}" WITH GRANT OPTION',
+                f'GRANT USAGE ON SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
             ]
 
             # Permissions based on level
             if permission_level == "admin":
                 # For admin, make owner of database and schema
                 permission_commands = [
-                    f'GRANT ALL PRIVILEGES ON DATABASE "{database_name}" TO "{username}"',
-                    f'GRANT ALL PRIVILEGES ON SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}"',
+                    f'GRANT ALL PRIVILEGES ON DATABASE "{database_name}" TO "{username}" WITH GRANT OPTION',
+                    f'GRANT ALL PRIVILEGES ON SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
+                    f'GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
+                    f'GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
+                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
                 ]
                 default_privilege_commands = [
                     f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT ALL PRIVILEGES ON TABLES TO "{username}"',
@@ -519,9 +513,9 @@ class CloudSQLUserManager:
 
             elif permission_level == "readwrite":
                 permission_commands = base_commands + [
-                    f'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}"',
+                    f'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
+                    f'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
+                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
                 ]
                 default_privilege_commands = [
                     f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "{username}"',
@@ -531,9 +525,9 @@ class CloudSQLUserManager:
 
             else:  # readonly
                 permission_commands = base_commands + [
-                    f'GRANT SELECT ON ALL TABLES IN SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT SELECT ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO "{username}"',
-                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}"',
+                    f'GRANT SELECT ON ALL TABLES IN SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
+                    f'GRANT SELECT ON ALL SEQUENCES IN SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
+                    f'GRANT EXECUTE ON ALL ROUTINES IN SCHEMA "{schema_name}" TO "{username}" WITH GRANT OPTION',
                 ]
                 default_privilege_commands = [
                     f'ALTER DEFAULT PRIVILEGES IN SCHEMA "{schema_name}" GRANT SELECT ON TABLES TO "{username}"',
@@ -613,6 +607,13 @@ class CloudSQLUserManager:
             if not self.create_schema_if_not_exists(cursor, schema_name, database_name):
                 logger.error(f"Failed to create or verify schema '{schema_name}'")
                 return False
+
+            # CRITICAL: Ensure postgres inherits permissions from this IAM user
+            # This allows postgres to REVOKE permissions from this user later
+            if not self.ensure_postgres_inherits_iam_permissions(cursor, normalized_username):
+                logger.warning(
+                    f"Failed to ensure postgres inherits permissions from {normalized_username}, continuing..."
+                )
 
             # 1. Clean existing permissions
             if not self.revoke_all_permissions(

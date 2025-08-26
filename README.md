@@ -360,6 +360,22 @@ Once the service is running, visit:
 
 ### Customization and Extensions
 
+## Mode 1: Permission Update (`remove_user_completely=False`)
+Used when changing a user's permission level (e.g., from readonly to readwrite):
+```python
+# Revokes all existing permissions 
+if remove_user_completely:
+    revoke_inheritance_command = f'REVOKE "{username}" FROM postgres'
+    if not self.execute_sql_safely(cursor, revoke_inheritance_command):
+        logger.warning(f"Failed to revoke inheritance: {revoke_inheritance_command}")
+        success = False
+    else:
+        logger.info(f"Successfully revoked inheritance for user {username} (user will be completely removed)")
+else:
+    logger.info(f"Keeping inheritance for user {username} (permissions can be regranted later)")
+```
+
+
 The project includes a `pseudocode/` directory with examples and guides for customizing the default behavior:
 
 - **`pseudocode/README.md`**: Overview of customization approaches
