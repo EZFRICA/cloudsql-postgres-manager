@@ -169,8 +169,6 @@ class CloudSQLUserManager:
             logger.error(f"SQL execution failed: {sql[:100]}... Error: {str(e)}")
             return False
 
-
-
     def schema_exists(self, cursor, schema_name: str) -> bool:
         """
         Check if a schema exists in the database
@@ -402,7 +400,7 @@ class CloudSQLUserManager:
                 if not self.execute_sql_safely(cursor, cmd):
                     logger.warning(f"Failed to revoke specific permissions: {cmd}")
                     success = False
-                    
+
             if success:
                 logger.info(f"Successfully revoked all permissions for user {username}")
             else:
@@ -416,26 +414,24 @@ class CloudSQLUserManager:
             logger.error(f"Error revoking permissions for user {username}: {e}")
             return False
 
-    def ensure_postgres_inherits_iam_permissions(
-        self, cursor, username: str
-    ) -> bool:
+    def ensure_postgres_inherits_iam_permissions(self, cursor, username: str) -> bool:
         """
         Ensure postgres inherits permissions from an IAM user
         This allows postgres to REVOKE permissions from this user later
-        
+
         Args:
             cursor: Database cursor
             username: IAM username to grant permissions to postgres
-            
+
         Returns:
             True if successful, False otherwise
         """
         try:
             logger.info(f"Ensuring postgres inherits permissions from user {username}")
-            
+
             # Normalize the username (remove .gserviceaccount.com suffix if present)
             normalized_username = self.normalize_service_account_name(username)
-            
+
             # Check if postgres already inherits permissions from this user
             check_query = """
                 SELECT 1 FROM pg_roles r1
@@ -444,26 +440,30 @@ class CloudSQLUserManager:
                 WHERE r1.rolname = 'postgres' 
                 AND r2.rolname = %s
             """
-            
+
             cursor.execute(check_query, (normalized_username,))
             already_inherits = cursor.fetchone() is not None
-            
+
             if already_inherits:
-                logger.info(f"postgres already inherits permissions from {normalized_username}, skipping GRANT")
+                logger.info(
+                    f"postgres already inherits permissions from {normalized_username}, skipping GRANT"
+                )
                 return True
-            
+
             # Grant the IAM user TO postgres so postgres can inherit their permissions
             grant_command = f'GRANT "{normalized_username}" TO postgres'
-            
+
             if self.execute_sql_safely(cursor, grant_command):
                 logger.info(f"Successfully granted {normalized_username} TO postgres")
                 return True
             else:
                 logger.warning(f"Failed to grant {normalized_username} TO postgres")
                 return False
-                
+
         except Exception as e:
-            logger.error(f"Error ensuring postgres inherits permissions from {username}: {e}")
+            logger.error(
+                f"Error ensuring postgres inherits permissions from {username}: {e}"
+            )
             return False
 
     def grant_permissions(
@@ -610,7 +610,9 @@ class CloudSQLUserManager:
 
             # CRITICAL: Ensure postgres inherits permissions from this IAM user
             # This allows postgres to REVOKE permissions from this user later
-            if not self.ensure_postgres_inherits_iam_permissions(cursor, normalized_username):
+            if not self.ensure_postgres_inherits_iam_permissions(
+                cursor, normalized_username
+            ):
                 logger.warning(
                     f"Failed to ensure postgres inherits permissions from {normalized_username}, continuing..."
                 )
