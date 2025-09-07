@@ -57,13 +57,16 @@ class RoleManager:
             True if all commands executed successfully, False otherwise
         """
         try:
-            with connection.cursor() as cursor:
-                for command in sql_commands:
-                    logger.debug(f"Executing SQL for {role_name}: {command}")
-                    cursor.execute(command)
-                connection.commit()
-                logger.info(f"Successfully executed SQL commands for role {role_name}")
-                return True
+            cursor = connection.cursor()
+            for command in sql_commands:
+                logger.debug(f"Executing SQL for {role_name}: {command}")
+                if not self.connection_manager.execute_sql_safely(cursor, command):
+                    logger.error(f"Failed to execute SQL command for {role_name}: {command}")
+                    return False
+            connection.commit()
+            cursor.close()
+            logger.info(f"Successfully executed SQL commands for role {role_name}")
+            return True
         except Exception as e:
             logger.error(f"Failed to execute SQL commands for role {role_name}: {e}")
             connection.rollback()
@@ -82,8 +85,11 @@ class RoleManager:
         Returns:
             Tuple of (success, action_taken)
         """
-        with connection.cursor() as cursor:
+        cursor = connection.cursor()
+        try:
             role_exists = DatabaseValidator.role_exists(cursor, role_def.name)
+        finally:
+            cursor.close()
         
         if role_exists and not force_update:
             logger.info(f"Role {role_def.name} already exists, skipping")
@@ -357,6 +363,8 @@ class RoleManager:
                     
                 except Exception as e:
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Failed to list roles: {e}")

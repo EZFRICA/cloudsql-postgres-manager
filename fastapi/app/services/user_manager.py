@@ -261,6 +261,8 @@ class UserManager:
                     
                 except Exception as e:
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Failed to get users and roles: {e}")
@@ -445,6 +447,8 @@ class UserManager:
                 except Exception as e:
                     conn.rollback()
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Failed to grant user {username} to postgres: {e}")
@@ -524,6 +528,8 @@ class UserManager:
                 except Exception as e:
                     conn.rollback()
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Failed to revoke user {username} from postgres: {e}")

@@ -156,6 +156,8 @@ class SchemaManager:
                 except Exception as e:
                     conn.rollback()
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Failed to create schema '{schema_name}': {e}")
@@ -257,6 +259,8 @@ class SchemaManager:
                     
                 except Exception as e:
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Failed to list schemas: {e}")
@@ -336,6 +340,8 @@ class SchemaManager:
                     
                 except Exception as e:
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Failed to list tables: {e}")

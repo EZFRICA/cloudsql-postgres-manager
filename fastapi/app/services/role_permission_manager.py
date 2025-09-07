@@ -100,7 +100,6 @@ class RolePermissionManager:
             Dictionary with validation results
         """
         try:
-            from .database_validator import DatabaseValidator
             normalized_username = DatabaseValidator.normalize_service_account_name(username)
             
             # Check if user is a valid IAM user
@@ -314,7 +313,6 @@ class RolePermissionManager:
         """
         try:
             # Normalize username (in case it contains .gserviceaccount.com)
-            from .database_validator import DatabaseValidator
             normalized_username = DatabaseValidator.normalize_service_account_name(username)
 
             # Validate that this is a manageable IAM user
@@ -462,6 +460,8 @@ class RolePermissionManager:
                 except Exception as e:
                     conn.rollback()
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Failed to assign role {role_name} to user {username}: {e}")
@@ -565,6 +565,8 @@ class RolePermissionManager:
                 except Exception as e:
                     conn.rollback()
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Failed to revoke role {role_name} from user {username}: {e}")

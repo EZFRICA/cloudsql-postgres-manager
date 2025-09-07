@@ -49,8 +49,9 @@ class ConnectionPool:
             conn = self._pool.get(timeout=self.timeout)
             # Test if connection is still alive
             try:
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT 1")
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1")
+                cursor.close()
                 return conn
             except Exception:
                 # Connection is dead, create a new one

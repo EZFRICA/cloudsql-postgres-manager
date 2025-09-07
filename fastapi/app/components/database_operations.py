@@ -122,6 +122,8 @@ class DatabaseOperation:
                 except Exception as e:
                     conn.rollback()
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             execution_time = time.time() - start_time
@@ -188,6 +190,8 @@ class DatabaseOperation:
                 except Exception as e:
                     conn.rollback()
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             execution_time = time.time() - start_time
@@ -249,6 +253,8 @@ class DatabaseOperation:
                 except Exception as e:
                     conn.rollback()
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             execution_time = time.time() - start_time

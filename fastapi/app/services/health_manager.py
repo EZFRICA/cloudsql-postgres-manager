@@ -89,6 +89,8 @@ class HealthManager:
                     
                 except Exception as e:
                     raise e
+                finally:
+                    cursor.close()
                     
         except Exception as e:
             logger.error(f"Database health check failed: {e}")
