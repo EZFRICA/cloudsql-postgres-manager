@@ -1,0 +1,566 @@
+{
+  "endpoints": {
+    "health": {
+      "description": "Health check endpoint - No JSON body required",
+      "method": "GET",
+      "url": "/health",
+      "example_response": {
+        "status": "healthy",
+        "service": "Cloud SQL IAM User Permission Manager",
+        "version": "0.1.0"
+      }
+    },
+    
+    "schemas": {
+      "create_schema": {
+        "description": "Create a new schema in the database",
+        "method": "POST",
+        "url": "/schemas/create",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1",
+          "schema_name": "app_schema"
+        },
+        "example_response": {
+          "success": true,
+          "message": "Schema created successfully",
+          "schema_name": "app_schema",
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "execution_time_seconds": 0.5
+        }
+      }
+    },
+    
+    "roles": {
+      "initialize_roles": {
+        "description": "Initialize PostgreSQL roles for a database",
+        "method": "POST",
+        "url": "/roles/initialize",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1",
+          "force_update": false,
+          "schema_name": "app_schema"
+        },
+        "example_response": {
+          "success": true,
+          "message": "Roles initialized successfully",
+          "roles_created": [
+            "app_public_reader",
+            "app_public_writer", 
+            "app_public_admin",
+            "app_public_monitor",
+            "app_public_analyst"
+          ],
+          "roles_updated": [],
+          "roles_skipped": [],
+          "total_roles": 5,
+          "firebase_document_id": "my-gcp-project_my-postgres-instance_my_database",
+          "execution_time_seconds": 2.5
+        }
+      },
+      
+      "get_role_status": {
+        "description": "Get role initialization status",
+        "method": "GET",
+        "url": "/roles/status?project_id=my-gcp-project&instance_name=my-postgres-instance&database_name=my_database",
+        "example_response": {
+          "roles_initialized": true,
+          "created_at": "2024-01-15T10:00:00Z",
+          "created_by": "system",
+          "last_updated": "2024-01-15T10:00:00Z",
+          "total_roles": 5,
+          "roles_definitions": {
+            "app_public_reader": {
+              "version": "1.0.0",
+              "status": "active"
+            }
+          }
+        }
+      },
+      
+      "assign_role": {
+        "description": "Assign a role to a user",
+        "method": "POST",
+        "url": "/roles/assign",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1",
+          "schema_name": "app_schema",
+          "username": "user@example.com",
+          "role_name": "mydb_app_writer"
+        },
+        "example_response": {
+          "success": true,
+          "message": "Role assigned successfully",
+          "username": "user@example.com",
+          "role_name": "mydb_app_writer",
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "schema_name": "app_schema",
+          "execution_time_seconds": 0.3
+        }
+      },
+      
+      "revoke_role": {
+        "description": "Revoke a role from a user",
+        "method": "POST",
+        "url": "/roles/revoke",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1",
+          "schema_name": "app_schema",
+          "username": "user@example.com",
+          "role_name": "mydb_app_writer"
+        },
+        "example_response": {
+          "success": true,
+          "message": "Role revoked successfully",
+          "username": "user@example.com",
+          "role_name": "mydb_app_writer",
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "schema_name": "app_schema",
+          "execution_time_seconds": 0.2
+        }
+      },
+      
+      "get_users_and_roles": {
+        "description": "Get all users and their assigned roles",
+        "method": "POST",
+        "url": "/roles/users",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1",
+          "schema_name": "app_schema"
+        },
+        "example_response": {
+          "success": true,
+          "message": "Retrieved 3 users with roles",
+          "users": [
+            {
+              "username": "user1@example.com",
+              "roles": ["mydb_app_reader", "mydb_app_writer"],
+              "is_iam_user": true
+            },
+            {
+              "username": "user2@example.com", 
+              "roles": ["mydb_app_admin"],
+              "is_iam_user": true
+            },
+            {
+              "username": "service-account@project.iam.gserviceaccount.com",
+              "roles": ["mydb_app_monitor"],
+              "is_iam_user": true
+            }
+          ],
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "schema_name": "app_schema",
+          "execution_time_seconds": 0.4
+        }
+      },
+      
+      "list_roles": {
+        "description": "List all available roles in the database",
+        "method": "POST",
+        "url": "/roles/list",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1",
+          "schema_name": "app_schema"
+        },
+        "example_response": {
+          "success": true,
+          "message": "Retrieved 5 roles",
+          "roles": [
+            "app_public_reader",
+            "app_public_writer",
+            "app_public_admin", 
+            "app_public_monitor",
+            "app_public_analyst"
+          ],
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "execution_time_seconds": 0.2
+        }
+      }
+    },
+    
+    "database": {
+      "list_schemas": {
+        "description": "List all schemas in the database",
+        "method": "POST",
+        "url": "/database/schemas",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1"
+        },
+        "example_response": {
+          "success": true,
+          "message": "Retrieved 3 schemas",
+          "schemas": [
+            "public",
+            "app_schema",
+            "analytics"
+          ],
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "execution_time_seconds": 0.2
+        }
+      },
+      
+      "list_tables": {
+        "description": "List all tables in a specific schema",
+        "method": "POST",
+        "url": "/database/tables",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1",
+          "schema_name": "app_schema"
+        },
+        "example_response": {
+          "success": true,
+          "message": "Retrieved 2 tables",
+          "tables": [
+            {
+              "table_name": "users",
+              "table_type": "BASE TABLE",
+              "row_count": 1000,
+              "size_bytes": 65536
+            },
+            {
+              "table_name": "orders",
+              "table_type": "BASE TABLE", 
+              "row_count": 5000,
+              "size_bytes": 327680
+            }
+          ],
+          "schema_name": "app_schema",
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "execution_time_seconds": 0.3
+        }
+      },
+      
+      "check_health": {
+        "description": "Check database health and connection status",
+        "method": "POST",
+        "url": "/database/health",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1"
+        },
+        "example_response": {
+          "success": true,
+          "message": "Database is healthy",
+          "status": "healthy",
+          "connection_time_ms": 45.2,
+          "database_info": {
+            "version": "PostgreSQL 15.4",
+            "uptime": "5 days, 12 hours",
+            "active_connections": 15
+          },
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "execution_time_seconds": 0.1
+        }
+      },
+      
+      "grant_user_to_postgres": {
+        "description": "Grant an IAM user to postgres to allow postgres to manage this user",
+        "method": "POST",
+        "url": "/database/postgres-inheritance/grant",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1",
+          "username": "my-service@my-gcp-project.iam.gserviceaccount.com"
+        },
+        "example_response": {
+          "success": true,
+          "message": "User my-service@my-gcp-project.iam.gserviceaccount.com granted to postgres successfully",
+          "username": "my-service@my-gcp-project.iam.gserviceaccount.com",
+          "normalized_username": "my-service@my-gcp-project.iam.gserviceaccount.com",
+          "execution_time_seconds": 0.15
+        }
+      },
+      
+      "revoke_user_from_postgres": {
+        "description": "Revoke an IAM user from postgres (remove inheritance)",
+        "method": "POST",
+        "url": "/database/postgres-inheritance/revoke",
+        "request_body": {
+          "project_id": "my-gcp-project",
+          "instance_name": "my-postgres-instance",
+          "database_name": "my_database",
+          "region": "europe-west1",
+          "username": "my-service@my-gcp-project.iam.gserviceaccount.com"
+        },
+        "example_response": {
+          "success": true,
+          "message": "User my-service@my-gcp-project.iam.gserviceaccount.com revoked from postgres successfully",
+          "username": "my-service@my-gcp-project.iam.gserviceaccount.com",
+          "normalized_username": "my-service@my-gcp-project.iam.gserviceaccount.com",
+          "execution_time_seconds": 0.12
+        }
+      }
+    }
+  },
+  
+  "test_scenarios": {
+    "basic_workflow": {
+      "description": "Complete workflow for setting up a new database",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Check service health",
+          "endpoint": "GET /health"
+        },
+        {
+          "step": 2,
+          "action": "Create application schema",
+          "endpoint": "POST /schemas/create",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "schema_name": "app_schema"
+          }
+        },
+        {
+          "step": 3,
+          "action": "Initialize roles for the schema",
+          "endpoint": "POST /roles/initialize",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "force_update": false,
+            "schema_name": "app_schema"
+          }
+        },
+        {
+          "step": 4,
+          "action": "Assign roles to users",
+          "endpoint": "POST /roles/assign",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "schema_name": "app_schema",
+            "username": "developer@company.com",
+            "role_name": "mydb_app_writer"
+          }
+        },
+        {
+          "step": 5,
+          "action": "Verify database health",
+          "endpoint": "POST /database/health",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1"
+          }
+        }
+      ]
+    },
+    
+    "monitoring_workflow": {
+      "description": "Workflow for monitoring and auditing",
+      "steps": [
+        {
+          "step": 1,
+          "action": "List all schemas",
+          "endpoint": "POST /database/schemas",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "step": 2,
+          "action": "List tables in a schema",
+          "endpoint": "POST /database/tables",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "schema_name": "app_schema"
+          }
+        },
+        {
+          "step": 3,
+          "action": "Get all users and their roles",
+          "endpoint": "POST /roles/users",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "schema_name": "app_schema"
+          }
+        },
+        {
+          "step": 4,
+          "action": "List all available roles",
+          "endpoint": "POST /roles/list",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "schema_name": "app_schema"
+          }
+        }
+      ]
+    },
+    
+    "postgres_inheritance_workflow": {
+      "description": "Workflow for managing PostgreSQL inheritance relationships",
+      "steps": [
+        {
+          "step": 1,
+          "action": "Check service health",
+          "endpoint": "GET /health"
+        },
+        {
+          "step": 2,
+          "action": "Grant user to postgres for role management",
+          "endpoint": "POST /database/postgres-inheritance/grant",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "username": "my-service@my-gcp-project.iam.gserviceaccount.com"
+          }
+        },
+        {
+          "step": 3,
+          "action": "Initialize roles for the schema",
+          "endpoint": "POST /roles/initialize",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "force_update": false,
+            "schema_name": "app_schema"
+          }
+        },
+        {
+          "step": 4,
+          "action": "Assign roles to the user (now possible due to inheritance)",
+          "endpoint": "POST /roles/assign",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "schema_name": "app_schema",
+            "username": "my-service@my-gcp-project.iam.gserviceaccount.com",
+            "role_name": "mydb_app_writer"
+          }
+        },
+        {
+          "step": 5,
+          "action": "Verify user roles assignment",
+          "endpoint": "POST /roles/users",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "schema_name": "app_schema"
+          }
+        },
+        {
+          "step": 6,
+          "action": "Revoke user from postgres (cleanup)",
+          "endpoint": "POST /database/postgres-inheritance/revoke",
+          "body": {
+            "project_id": "my-gcp-project",
+            "instance_name": "my-postgres-instance",
+            "database_name": "my_database",
+            "region": "europe-west1",
+            "username": "my-service@my-gcp-project.iam.gserviceaccount.com"
+          }
+        }
+      ]
+    }
+  },
+  
+  "curl_examples": {
+    "health_check": "curl -X GET http://localhost:8000/health",
+    
+    "create_schema": "curl -X POST http://localhost:8000/schemas/create \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"project_id\": \"my-gcp-project\",\n    \"instance_name\": \"my-postgres-instance\",\n    \"database_name\": \"my_database\",\n    \"region\": \"europe-west1\",\n    \"schema_name\": \"app_schema\"\n  }'",
+    
+    "initialize_roles": "curl -X POST http://localhost:8000/roles/initialize \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"project_id\": \"my-gcp-project\",\n    \"instance_name\": \"my-postgres-instance\",\n    \"database_name\": \"my_database\",\n    \"region\": \"europe-west1\",\n    \"force_update\": false,\n    \"schema_name\": \"app_schema\"\n  }'",
+    
+    "assign_role": "curl -X POST http://localhost:8000/roles/assign \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"project_id\": \"my-gcp-project\",\n    \"instance_name\": \"my-postgres-instance\",\n    \"database_name\": \"my_database\",\n    \"region\": \"europe-west1\",\n    \"schema_name\": \"app_schema\",\n    \"username\": \"user@example.com\",\n    \"role_name\": \"mydb_app_writer\"\n  }'",
+    
+    "check_database_health": "curl -X POST http://localhost:8000/database/health \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"project_id\": \"my-gcp-project\",\n    \"instance_name\": \"my-postgres-instance\",\n    \"database_name\": \"my_database\",\n    \"region\": \"europe-west1\"\n  }'",
+    
+    "grant_user_to_postgres": "curl -X POST http://localhost:8000/database/postgres-inheritance/grant \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"project_id\": \"my-gcp-project\",\n    \"instance_name\": \"my-postgres-instance\",\n    \"database_name\": \"my_database\",\n    \"region\": \"europe-west1\",\n    \"username\": \"my-service@my-gcp-project.iam.gserviceaccount.com\"\n  }'",
+    
+    "revoke_user_from_postgres": "curl -X POST http://localhost:8000/database/postgres-inheritance/revoke \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"project_id\": \"my-gcp-project\",\n    \"instance_name\": \"my-postgres-instance\",\n    \"database_name\": \"my_database\",\n    \"region\": \"europe-west1\",\n    \"username\": \"my-service@my-gcp-project.iam.gserviceaccount.com\"\n  }'"
+  },
+  
+  "notes": {
+    "authentication": "Make sure to configure proper authentication headers if required",
+    "base_url": "Replace 'localhost:8000' with your actual server URL",
+    "project_requirements": "Ensure your GCP project has Cloud SQL instances and proper IAM permissions",
+    "testing_tips": [
+      "Start with the health check endpoint to verify service availability",
+      "Use the basic workflow for initial setup",
+      "Use monitoring workflow for ongoing operations",
+      "Use postgres_inheritance_workflow for role management scenarios",
+      "Grant users to postgres before assigning roles to them",
+      "Revoke users from postgres after role assignments for security",
+      "Check logs for detailed error information if requests fail"
+    ],
+    "postgres_inheritance_notes": [
+      "PostgreSQL inheritance is required for postgres to manage IAM users",
+      "Grant users to postgres before role assignment operations",
+      "Revoke users from postgres after operations for security hardening",
+      "Operations are idempotent - safe to call multiple times",
+      "Only valid IAM users can be granted to postgres"
+    ]
+  }
+}
