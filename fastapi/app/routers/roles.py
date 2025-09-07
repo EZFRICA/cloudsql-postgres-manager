@@ -8,12 +8,14 @@ from app.models import (
     RoleListRequest, RoleOperationResponse, UserRoleListResponse, RoleListResponse
 )
 from app.services.role_manager import RoleManager
+from app.services.role_permission_manager import RolePermissionManager
 from app.utils.logging_config import logger
 
 router = APIRouter(prefix="/roles", tags=["Role Management"])
 
 # Global instances
 role_manager = RoleManager()
+role_permission_manager = RolePermissionManager()
 
 
 @router.post("/initialize", response_model=RoleInitializeResponse)
@@ -154,7 +156,7 @@ async def assign_role(request: RoleAssignRequest):
             f"Role assignment request - user: {request.username}, role: {request.role_name}"
         )
         
-        result = role_manager.assign_role(
+        result = role_permission_manager.assign_role(
             project_id=request.project_id,
             region=request.region,
             instance_name=request.instance_name,
