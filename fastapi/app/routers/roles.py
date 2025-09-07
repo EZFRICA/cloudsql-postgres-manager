@@ -9,6 +9,7 @@ from app.models import (
 )
 from app.services.role_manager import RoleManager
 from app.services.role_permission_manager import RolePermissionManager
+from app.services.user_manager import UserManager
 from app.utils.logging_config import logger
 
 router = APIRouter(prefix="/roles", tags=["Role Management"])
@@ -16,6 +17,7 @@ router = APIRouter(prefix="/roles", tags=["Role Management"])
 # Global instances
 role_manager = RoleManager()
 role_permission_manager = RolePermissionManager()
+user_manager = UserManager()
 
 
 @router.post("/initialize", response_model=RoleInitializeResponse)
@@ -212,7 +214,7 @@ async def revoke_role(request: RoleRevokeRequest):
             f"Role revocation request - user: {request.username}, role: {request.role_name}"
         )
         
-        result = role_manager.revoke_role(
+        result = role_permission_manager.revoke_role(
             project_id=request.project_id,
             region=request.region,
             instance_name=request.instance_name,
@@ -266,7 +268,7 @@ async def get_users_and_roles(request: RoleListRequest):
             f"User role listing request - schema: {request.schema_name}"
         )
         
-        result = role_manager.get_users_and_roles(
+        result = user_manager.get_users_and_roles(
             project_id=request.project_id,
             region=request.region,
             instance_name=request.instance_name,
