@@ -243,11 +243,7 @@ cloudsql-postgres-manager/
 - **Documentation**: [md/](./md/) directory
 - **API Docs**: http://localhost:8080/docs
 - **Issues**: GitHub Issues
-- **Email**: support@your-org.com
 
-## 📄 License
-
-This project is licensed under the MIT License.
 
 ---
 
