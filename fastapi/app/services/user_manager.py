@@ -444,7 +444,7 @@ class UserManager:
                             "execution_time_seconds": time.time() - start_time,
                         }
 
-                    normalized_username = validation["normalized_username"]
+                    normalized_username = validation["username"]
 
                     # Check if postgres already inherits permissions from this user
                     cursor.execute(
@@ -538,7 +538,7 @@ class UserManager:
 
                 try:
                     normalized_username = (
-                        self.connection_manager.normalize_service_account_name(username)
+                        DatabaseValidator.normalize_service_account_name(username)
                     )
 
                     # Check if postgres currently has this inheritance

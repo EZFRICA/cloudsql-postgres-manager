@@ -579,7 +579,7 @@ class RolePermissionManager:
                     )
 
                     # Check if user exists
-                    if not self.user_manager.user_exists(cursor, username):
+                    if not self.user_manager.user_exists(cursor, normalized_username):
                         return {
                             "success": False,
                             "message": f"User {normalized_username} does not exist",

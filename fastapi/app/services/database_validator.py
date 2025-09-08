@@ -100,6 +100,11 @@ class DatabaseValidator:
             True if user is a valid IAM user, False otherwise
         """
         try:
+            # Normalize the username for consistent lookup
+            normalized_username = DatabaseValidator.normalize_service_account_name(
+                username
+            )
+
             # Check if user exists
             cursor.execute(
                 """
@@ -110,7 +115,7 @@ class DatabaseValidator:
                 FROM pg_roles 
                 WHERE rolname = %s
                 """,
-                (username,),
+                (normalized_username,),
             )
 
             user_info = cursor.fetchone()
