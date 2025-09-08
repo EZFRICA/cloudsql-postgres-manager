@@ -22,46 +22,12 @@ from app.utils.logging_config import logger
 
 router = APIRouter(prefix="/roles", tags=["Role Management"])
 
-# Global instances - using lazy initialization to avoid circular imports
-_connection_manager = None
-_schema_manager = None
-_role_manager = None
-_user_manager = None
-_role_permission_manager = None
-
-def get_connection_manager():
-    global _connection_manager
-    if _connection_manager is None:
-        _connection_manager = ConnectionManager()
-    return _connection_manager
-
-def get_schema_manager():
-    global _schema_manager
-    if _schema_manager is None:
-        _schema_manager = SchemaManager(get_connection_manager())
-    return _schema_manager
-
-def get_role_manager():
-    global _role_manager
-    if _role_manager is None:
-        _role_manager = RoleManager()
-    return _role_manager
-
-def get_user_manager():
-    global _user_manager
-    if _user_manager is None:
-        _user_manager = UserManager(get_connection_manager())
-    return _user_manager
-
-def get_role_permission_manager():
-    global _role_permission_manager
-    if _role_permission_manager is None:
-        _role_permission_manager = RolePermissionManager(
-            get_connection_manager(), 
-            get_schema_manager(), 
-            get_user_manager()
-        )
-    return _role_permission_manager
+# Global instances
+connection_manager = ConnectionManager()
+schema_manager = SchemaManager(connection_manager)
+role_manager = RoleManager()
+user_manager = UserManager(connection_manager)
+role_permission_manager = RolePermissionManager(connection_manager, schema_manager, user_manager)
 
 
 @router.post("/initialize", response_model=RoleInitializeResponse)
@@ -110,7 +76,7 @@ async def initialize_roles(request: RoleInitializeRequest):
         )
 
         # Initialize roles
-        result = get_role_manager().initialize_roles(
+        result = role_manager.initialize_roles(
             project_id=request.project_id,
             instance_name=request.instance_name,
             database_name=request.database_name,
@@ -152,7 +118,7 @@ async def get_role_status(project_id: str, instance_name: str, database_name: st
         database_name: Database name
     """
     try:
-        status = get_role_manager().get_role_status(project_id, instance_name, database_name)
+        status = role_manager.get_role_status(project_id, instance_name, database_name)
 
         if status is None:
             return {
@@ -202,7 +168,7 @@ async def assign_role(request: RoleAssignRequest):
             f"Role assignment request - user: {request.username}, role: {request.role_name}"
         )
 
-        result = get_role_permission_manager().assign_role(
+        result = role_permission_manager.assign_role(
             project_id=request.project_id,
             region=request.region,
             instance_name=request.instance_name,
@@ -258,7 +224,7 @@ async def revoke_role(request: RoleRevokeRequest):
             f"Role revocation request - user: {request.username}, role: {request.role_name}"
         )
 
-        result = get_role_permission_manager().revoke_role(
+        result = role_permission_manager.revoke_role(
             project_id=request.project_id,
             region=request.region,
             instance_name=request.instance_name,
@@ -310,7 +276,7 @@ async def get_users_and_roles(request: RoleListRequest):
     try:
         logger.info(f"User role listing request - schema: {request.schema_name}")
 
-        result = get_user_manager().get_users_and_roles(
+        result = user_manager.get_users_and_roles(
             project_id=request.project_id,
             region=request.region,
             instance_name=request.instance_name,
@@ -369,7 +335,7 @@ async def list_roles(request: RoleListRequest):
             f"instance: {request.instance_name}, database: {request.database_name}"
         )
 
-        result = get_role_manager().list_roles(
+        result = role_manager.list_roles(
             project_id=request.project_id,
             region=request.region,
             instance_name=request.instance_name,
