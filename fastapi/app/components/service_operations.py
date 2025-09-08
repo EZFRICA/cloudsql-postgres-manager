@@ -6,11 +6,10 @@ to reduce code duplication and improve consistency.
 """
 
 import time
-from typing import Any, Dict, List, Optional, Callable, Union
+from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass
 from app.components.base_responses import BaseResponse, SuccessResponse, ErrorResponse
 from app.components.logging_helpers import LoggingHelper
-from app.components.error_handlers import ErrorHandler
 
 
 @dataclass

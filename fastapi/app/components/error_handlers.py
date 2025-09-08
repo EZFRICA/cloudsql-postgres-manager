@@ -5,7 +5,7 @@ This module provides standardized error handling utilities
 to reduce code duplication and improve consistency.
 """
 
-from typing import Any, Dict, List, Optional, Union, Callable
+from typing import Any, Dict, Optional, Union, Callable
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError

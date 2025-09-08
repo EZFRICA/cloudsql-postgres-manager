@@ -8,7 +8,7 @@ for creating customizable role definitions.
 import hashlib
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 
 

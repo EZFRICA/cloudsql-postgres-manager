@@ -5,13 +5,12 @@ This module demonstrates how to use the reusable components
 to reduce code duplication and improve maintainability.
 """
 
-from fastapi import APIRouter, HTTPException, status, Request
+from fastapi import APIRouter, Request
 from app.models import SchemaCreateRequest, SchemaCreateResponse
 from app.services.schema_manager import SchemaManager
 from app.services.connection_manager import ConnectionManager
 from app.components import (
     SuccessResponse,
-    ErrorResponse,
     ValidationHelper,
     ErrorHandler,
     ServiceManager,

@@ -27,7 +27,9 @@ connection_manager = ConnectionManager()
 schema_manager = SchemaManager(connection_manager)
 role_manager = RoleManager()
 user_manager = UserManager(connection_manager)
-role_permission_manager = RolePermissionManager(connection_manager, schema_manager, user_manager)
+role_permission_manager = RolePermissionManager(
+    connection_manager, schema_manager, user_manager
+)
 
 
 @router.post("/initialize", response_model=RoleInitializeResponse)

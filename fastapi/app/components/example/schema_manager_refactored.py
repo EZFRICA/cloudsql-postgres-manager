@@ -5,8 +5,6 @@ This module demonstrates how to use the reusable components
 to reduce code duplication and improve maintainability in services.
 """
 
-import time
-from typing import Dict
 from app.components import ServiceManager, DatabaseOperation, LoggingHelper
 from .connection_manager import ConnectionManager
 

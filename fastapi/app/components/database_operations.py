@@ -6,8 +6,7 @@ to reduce code duplication and improve error handling.
 """
 
 import time
-from typing import Any, Dict, List, Optional, Callable, Union
-from contextlib import contextmanager
+from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass
 from app.services.connection_manager import ConnectionManager
 from app.utils.logging_config import logger

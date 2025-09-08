@@ -1,4 +1,3 @@
-import os
 import threading
 from contextlib import contextmanager
 from typing import Tuple, Dict, Any
@@ -55,12 +54,12 @@ class ConnectionPool:
                 cursor.execute("SELECT 1")
                 cursor.close()
                 return conn
-            except Exception:
+            except Exception as e:
                 # Connection is dead, create a new one
-                pass
+                logger.debug(f"Connection from pool is dead, will create new one: {e}")
         except Empty:
             # No connection available in pool
-            pass
+            logger.debug("No connection available in pool, will create new one")
 
         # Create new connection if under limit
         with self._lock:
@@ -78,12 +77,12 @@ class ConnectionPool:
         """Return a connection to the pool."""
         try:
             self._pool.put_nowait(conn)
-        except:
+        except Exception:
             # Pool is full, close the connection
             try:
                 conn.close()
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to close connection: {e}")
             with self._lock:
                 self._created_connections -= 1
 
@@ -93,8 +92,8 @@ class ConnectionPool:
             try:
                 conn = self._pool.get_nowait()
                 conn.close()
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to close connection during pool cleanup: {e}")
         self._connector.close()
 
 
@@ -102,7 +101,6 @@ class ConnectionManager:
     """Enhanced manager for Cloud SQL database connections with connection pooling"""
 
     def __init__(self):
-        config = get_database_config()
         self.pools: Dict[str, ConnectionPool] = {}
         self._lock = threading.Lock()
 
