@@ -16,6 +16,12 @@ This directory contains comprehensive documentation for the Cloud SQL PostgreSQL
 - **[API.md](./API.md)** - Complete API endpoint documentation with examples
 - **[test_endpoints.json](./test_endpoints.json)** - Test endpoints and sample requests
 
+### 🧪 Testing Documentation
+- **[ROLE_TESTING.md](./ROLE_TESTING.md)** - Comprehensive guide for testing standard roles and permissions
+- **[QUICK_TEST_GUIDE.md](./QUICK_TEST_GUIDE.md)** - Quick 5-minute testing guide for role validation
+- **[role_test_scripts.sql](./role_test_scripts.sql)** - Automated SQL test scripts
+- **[test_config_example.env](./test_config_example.env)** - Example configuration file for testing
+
 ### 🚀 Deployment Documentation
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Comprehensive deployment guide for various environments
 

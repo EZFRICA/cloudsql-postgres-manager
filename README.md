@@ -2,178 +2,209 @@
 
 A comprehensive solution for automating Google Cloud SQL PostgreSQL database management and IAM user permissions across multiple databases in an organization.
 
-## 🎯 Problem Statement
+## 📚 Documentation Overview
 
-In organizations managing multiple databases, manual database administration becomes increasingly tedious and error-prone. This is especially true when dealing with Google Cloud SQL PostgreSQL instances where you need to:
+This project contains comprehensive documentation for the Cloud SQL PostgreSQL Manager, a modular FastAPI service for managing PostgreSQL databases, schemas, roles, and IAM user permissions in Google Cloud SQL.
 
-- **Manually create database instances** for each project/environment
-- **Manage database admin passwords** securely across multiple instances
-- **Create and configure databases** within each instance
-- **Add IAM users and service accounts** with appropriate permissions
-- **Grant specific database permissions** to each user (readonly, readwrite, admin)
-- **Maintain consistency** across multiple environments (dev, staging, production)
+## 📖 Documentation Structure
 
-**The Challenge**: As your organization grows, managing dozens of PostgreSQL instances manually becomes:
-- ❌ **Time-consuming**: Hours spent on repetitive database setup tasks
-- ❌ **Error-prone**: Manual permission grants can lead to security issues
-- ❌ **Inconsistent**: Different administrators may set up databases differently
-- ❌ **Hard to audit**: No centralized way to track who has access to what
-- ❌ **Difficult to scale**: Adding new databases requires manual intervention
+### 🏗️ Architecture Documentation
+- **[md/ARCHITECTURE_OVERVIEW.md](./md/ARCHITECTURE_OVERVIEW.md)** - High-level system architecture and design principles
+- **[md/SERVICES.md](./md/SERVICES.md)** - Detailed documentation of all services and their responsibilities
+- **[md/COMPONENTS.md](./md/COMPONENTS.md)** - Component system documentation and reusable business logic
+- **[md/PLUGINS.md](./md/PLUGINS.md)** - Plugin system documentation for extensible role management
 
-## 💡 Solution Overview
+### 🌐 API Documentation
+- **[md/API.md](./md/API.md)** - Complete API endpoint documentation with examples
+- **[md/test_endpoints.json](./md/test_endpoints.json)** - Test endpoints and sample requests
 
-This solution provides a complete automation framework for Google Cloud SQL PostgreSQL management using **Terraform** for infrastructure and **FastAPI/Flask** for dynamic user permission management.
+### 🧪 Testing Documentation
+- **[md/ROLE_TESTING.md](./md/ROLE_TESTING.md)** - Comprehensive guide for testing standard roles and permissions
+- **[md/QUICK_TEST_GUIDE.md](./md/QUICK_TEST_GUIDE.md)** - Quick 5-minute testing guide for role validation
+- **[md/role_test_scripts.sql](./md/role_test_scripts.sql)** - Automated SQL test scripts
 
-### 🏗️ Architecture
+### 🚀 Deployment Documentation
+- **[md/DEPLOYMENT.md](./md/DEPLOYMENT.md)** - Comprehensive deployment guide for various environments
+
+## 🎯 Quick Start
+
+### 1. Architecture Understanding
+Start with [md/ARCHITECTURE_OVERVIEW.md](./md/ARCHITECTURE_OVERVIEW.md) to understand the system design and components.
+
+### 2. Service Details
+Read [md/SERVICES.md](./md/SERVICES.md) to understand each service's responsibilities and interactions.
+
+### 3. API Usage
+Check [md/API.md](./md/API.md) for endpoint documentation and examples.
+
+### 4. Deployment
+Follow [md/DEPLOYMENT.md](./md/DEPLOYMENT.md) for deployment instructions.
+
+## 🏗️ System Architecture
+
+The system follows a **modular microservices architecture** with clear separation of concerns:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   FastAPI/Flask │    │   Terraform     │    │   Cloud SQL     │
-│   Application   │    │ Infrastructure  │    │   PostgreSQL    │
+│   API Layer     │    │  Service Layer  │    │ Component Layer │
 │                 │    │                 │    │                 │
-│ - User Mgmt     │◄──►│ - VPC           │◄──►│ - Instances     │
-│ - Permissions   │    │ - Service Acct  │    │ - Databases     │
-│ - Pub/Sub       │    │ - Secret Mgmt   │    │ - Users         │
-└─────────────────┘    │ - Cloud SQL     │    └─────────────────┘
-                       └─────────────────┘
+│ • Health Router │    │ • ConnectionMgr │    │ • Validation    │
+│ • Database Router│    │ • SchemaMgr    │    │ • ErrorHandler  │
+│ • Schema Router │    │ • RoleMgr       │    │ • ServiceOps    │
+│ • Role Router   │    │ • UserMgr       │    │ • DatabaseOps   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## 🚀 Solution Components
+## 🔧 Key Features
 
-### 1. Terraform Infrastructure Automation
+### Database Management
+- **Schema Operations**: Create, list, and manage database schemas
+- **Table Management**: List tables with metadata and statistics
+- **Health Monitoring**: Comprehensive database health checks
+- **Connection Pooling**: High-performance connection management
 
-**Module 1: Cloud SQL Instance Creation**
-- ✅ **Automated instance provisioning** with configurable machine types
-- ✅ **Secure password management** - root passwords stored in Secret Manager
-- ✅ **Network configuration** with private IP addresses
-- ✅ **Backup and maintenance** windows configured automatically
+### Role-Based Access Control
+- **Plugin System**: Extensible role definitions with versioning
+- **Permission Levels**: `readonly`, `readwrite`, `admin` with granular control
+- **IAM Integration**: Seamless Google Cloud IAM user management
+- **Role Registry**: Firestore-based role tracking and history
 
-**Module 2: Database and User Management**
-- ✅ **Database creation** within instances
-- ✅ **IAM user and service account** creation with proper roles
-- ✅ **Role assignment** (`roles/cloudsql.instanceUser`, `roles/cloudsql.client`)
-- ✅ **Multi-environment support** (dev, staging, production)
+### Security & Validation
+- **Input Validation**: Comprehensive request validation
+- **IAM Validation**: Service account and permission verification
+- **SQL Injection Protection**: Parameterized queries and sanitization
+- **Error Handling**: Secure error responses without information leakage
 
-### 2. FastAPI/Flask Application
+## 📋 Service Overview
 
-**Dynamic Permission Management**
-- ✅ **RESTful API** for managing user permissions
-- ✅ **Three permission levels**: readonly, readwrite, admin
-- ✅ **Pub/Sub integration** for event-driven updates
-- ✅ **Automatic schema creation** if needed
-- ✅ **Comprehensive logging** and error handling
+| Service | Purpose | Key Features |
+|---------|---------|--------------|
+| **ConnectionManager** | Database connection pooling | High-performance, automatic recovery |
+| **SchemaManager** | Schema and table operations | Creation, listing, ownership management |
+| **RoleManager** | Role initialization and management | Plugin system, versioning, Firestore integration |
+| **UserManager** | IAM user operations | Validation, normalization, permission checks |
+| **RolePermissionManager** | Role assignments | User-role mapping, permission management |
+| **HealthManager** | System monitoring | Health checks, performance metrics |
 
-## 📋 Prerequisites
+## 🔌 Plugin System
 
-- Google Cloud Platform account with billing enabled
-- Google Cloud SDK installed and configured
-- Terraform >= 1.0 installed
-- Python 3.8+ (for local development)
+The system includes an extensible plugin architecture for role management:
 
-## 🎯 Real Usage Scenario
+- **StandardRolePlugin**: Built-in role definitions
+- **CustomRolePlugin**: Custom role implementations
+- **PluginRegistry**: Plugin management and loading
+- **Version Control**: Role versioning and updates
 
-### Step 1: Infrastructure Setup with Terraform
+## 🌐 API Endpoints
 
+### Database Management
+- `POST /database/schemas` - List database schemas
+- `POST /database/tables` - List schema tables
+- `POST /database/health` - Database health check
+
+### Schema Management
+- `POST /schemas/create` - Create database schema
+
+### Role Management
+- `POST /roles/initialize` - Initialize roles
+- `POST /roles/assign` - Assign role to user
+- `POST /roles/revoke` - Revoke role from user
+- `POST /roles/list` - List available roles
+
+## 🚀 Deployment Options
+
+### Local Development
 ```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd cloudsql-postgres-manager
-
-# 2. Configure GCP project
-export PROJECT_ID="your-gcp-project"
-gcloud config set project $PROJECT_ID
-
-# 3. Enable required APIs
-gcloud services enable sqladmin.googleapis.com
-gcloud services enable secretmanager.googleapis.com
-gcloud services enable resourcemanager.googleapis.com
-
-# 4. Initialize and deploy infrastructure
-terraform init
-terraform plan
-terraform apply
-```
-
-**What Terraform automatically creates:**
-- ✅ **Cloud SQL PostgreSQL instance** with private networking
-- ✅ **Secret Manager secret** for secure postgres user password storage
-- ✅ **Service account** with necessary IAM permissions
-- ✅ **VPC and networking** resources
-- ✅ **Databases** within the instance
-- ✅ **IAM users and service accounts** with `roles/cloudsql.instanceUser` and `roles/cloudsql.client`
-
-### Step 2: Verify Infrastructure
-
-```bash
-# Check created resources
-gcloud sql instances list
-gcloud sql databases list --instance=postgres-production-instance
-gcloud secrets list
-
-# Get connection details
-terraform output
-```
-
-### Step 3: Deploy FastAPI/Flask Application
-
-```bash
-# Option 1: Local deployment
 cd fastapi
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8080
-
-# Option 2: Docker deployment
-docker build -t postgres-manager ./fastapi
-docker run -p 8080:8080 \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
-  postgres-manager
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 ```
 
-### Step 4: Manage IAM User Permissions
-
-#### Basic User Management
+### Docker
 ```bash
-# Create JSON file with user data
-cat > user-management.json << 'EOF'
-{
-  "project_id": "your-gcp-project",
-  "instance_name": "postgres-production-instance",
-  "database_name": "app_db",
-  "region": "europe-west1",
-  "schema_name": "app_schema",
-  "iam_users": [
-    {
-      "name": "app-service@your-gcp-project.iam.gserviceaccount.com",
-      "permission_level": "readwrite"
-    },
-    {
-      "name": "analytics-service@your-gcp-project.iam.gserviceaccount.com", 
-      "permission_level": "readonly"
-    },
-    {
-      "name": "admin-service@your-gcp-project.iam.gserviceaccount.com",
-      "permission_level": "admin"
-    }
-  ]
-}
-EOF
-
-# Call API to manage users
-curl -X POST http://localhost:8080/manage-users \
-  -H "Content-Type: application/json" \
-  -d @user-management.json
+cd fastapi
+docker build -t cloudsql-postgres-manager .
+docker run -p 8080:8080 cloudsql-postgres-manager
 ```
 
-### Step 5: Verify Permissions
-
+### Google Cloud Run
 ```bash
-# Connect to database to verify permissions
-gcloud sql connect postgres-production-instance --user=postgres
-
-# In PostgreSQL, check users and their permissions
-\du
-SELECT * FROM information_schema.role_table_grants;
+gcloud run deploy cloudsql-postgres-manager \
+  --image gcr.io/PROJECT_ID/cloudsql-postgres-manager \
+  --platform managed \
+  --region europe-west1
 ```
+
+### Kubernetes
+```bash
+kubectl apply -f k8s/
+```
+
+## 🧪 Testing
+
+### Unit Tests
+```bash
+pytest tests/unit/
+```
+
+### Integration Tests
+```bash
+pytest tests/integration/
+```
+
+### API Testing
+```bash
+python test_validation.py
+```
+
+### Role Testing
+For comprehensive role testing, see the testing documentation:
+- **[md/ROLE_TESTING.md](./md/ROLE_TESTING.md)** - Complete testing guide
+- **[md/QUICK_TEST_GUIDE.md](./md/QUICK_TEST_GUIDE.md)** - Quick testing guide
+- **[md/role_test_scripts.sql](./md/role_test_scripts.sql)** - Automated test scripts
+
+## 📊 Monitoring
+
+### Health Checks
+- **Service Health**: `GET /health`
+- **Database Health**: `POST /database/health`
+
+### Metrics
+- Request processing time
+- Database connection metrics
+- Error rates by endpoint
+- Role operation success rates
+
+### Logging
+Structured JSON logging with correlation IDs and performance metrics.
+
+## 🔒 Security
+
+### Authentication
+- Google Cloud IAM integration
+- Service account validation
+- Permission verification
+
+### Data Protection
+- Secret Manager for credentials
+- Parameterized queries
+- Input validation and sanitization
+
+### Error Security
+- Sanitized error messages
+- No sensitive data in logs
+- Structured error responses
+
+## 📈 Performance
+
+### Connection Pooling
+- High-performance connection management
+- Configurable pool sizes
+- Automatic connection recovery
+
+### Scalability
+- Modular design for independent scaling
+- Plugin-based extensibility
+- Component reusability
 
 ## 📁 Project Structure
 
@@ -184,231 +215,50 @@ cloudsql-postgres-manager/
 │   │   ├── main.py            # Main application code
 │   │   ├── models.py          # Pydantic models
 │   │   ├── services/          # Business logic
+│   │   ├── components/        # Reusable components
+│   │   ├── routers/           # API endpoints
+│   │   ├── plugins/           # Plugin system
 │   │   └── utils/             # Utilities
 │   ├── requirements.txt       # Python dependencies
 │   └── Dockerfile            # Container configuration
-├── flask/                     # Flask application (alternative)
-│   ├── app/
-│   │   ├── main.py           # Main application code
-│   │   ├── services/         # Business logic
-│   │   └── utils/            # Utilities
-│   ├── requirements.txt      # Python dependencies
-│   └── Dockerfile           # Container configuration
-└── README.md               # This file
+├── md/                        # Documentation
+│   ├── README.md             # This file
+│   ├── API.md                # API documentation
+│   ├── SERVICES.md           # Service documentation
+│   ├── ROLE_TESTING.md       # Role testing guide
+│   └── ...                   # Other documentation
+└── README.md                 # This file
 ```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-The FastAPI/Flask service uses the following environment variables:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LOG_LEVEL` | Logging level | `INFO` |
-| `SECRET_NAME_SUFFIX` | Secret name suffix | `postgres-password` |
-| `DB_ADMIN_USER` | PostgreSQL admin user | `postgres` |
-
-### Terraform Variables
-
-Key variables for Terraform configuration:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `project_id` | GCP Project ID | Required |
-| `region` | GCP Region | `us-central1` |
-| `instance_name` | Cloud SQL instance name | `postgres-dev-instance` |
-| `machine_type` | Instance machine type | `db-f1-micro` |
-
-## 🛠️ API Endpoints
-
-### Health Check
-```http
-GET /health
-```
-
-### Direct User Management
-```http
-POST /manage-users
-Content-Type: application/json
-
-{
-  "project_id": "your-gcp-project",
-  "instance_name": "postgres-production-instance",
-  "database_name": "app_db",
-  "region": "europe-west1",
-  "schema_name": "app_schema",
-  "iam_users": [
-    {
-      "name": "user@project.iam.gserviceaccount.com",
-      "permission_level": "readonly"
-    }
-  ]
-}
-```
-
-### Pub/Sub Integration
-```http
-POST /pubsub
-Content-Type: application/json
-
-{
-  "message": {
-    "data": "base64-encoded-json-data",
-    "attributes": {},
-    "messageId": "message-id",
-    "publishTime": "timestamp"
-  }
-}
-```
-
-## 🔐 Permission Levels
-
-The service supports three permission levels:
-
-1. **readonly**: SELECT permissions only
-2. **readwrite**: SELECT, INSERT, UPDATE, DELETE permissions
-3. **admin**: Full database administration permissions
-
-## 🚀 Deployment Options
-
-### Local Development
-
-```bash
-# Install dependencies
-pip install -r fastapi/requirements.txt
-
-# Run locally
-cd fastapi
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
-```
-
-### Docker Deployment
-
-```bash
-# Build image
-docker build -t postgres-manager ./fastapi
-
-# Run container
-docker run -p 8080:8080 \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
-  postgres-manager
-```
-
-### Google Cloud Run
-
-```bash
-# Deploy to Cloud Run
-gcloud run deploy postgres-manager \
-  --source ./fastapi \
-  --platform managed \
-  --region europe-west1 \
-  --allow-unauthenticated
-```
-
-## 🔍 Monitoring and Logging
-
-### Logging
-
-The application uses structured logging with the following levels:
-- `INFO`: General application information
-- `WARNING`: Warning messages
-- `ERROR`: Error messages with stack traces
-- `DEBUG`: Detailed debugging information
-
-### Health Checks
-
-The `/health` endpoint provides:
-- Service status
-- Version information
-- Basic connectivity checks
-
-## 🔒 Security
-
-### IAM Permissions
-
-The cloud run service account requires the following roles:
-- `roles/cloudsql.client`
-- `roles/cloudsql.instanceUser`
-- `roles/secretmanager.secretAccessor`
-- `roles/browser`
-
-### Network Security
-
-- VPC with private subnets
-- Private IP addresses for database connections (PSA or PSC)
-- Cloud Run need VPC Serverless Connectors or Direct VPC egress
-
-## 🧪 Testing
-
-### Integration Tests
-
-```bash
-# Test with sample data
-curl -X POST http://localhost:8080/manage-users \
-  -H "Content-Type: application/json" \
-  -d @test-data.json
-```
-
-## 📚 Documentation
-
-### API Documentation
-
-Once the service is running, visit:
-- Swagger UI: `http://localhost:8080/docs`
-- ReDoc: `http://localhost:8080/redoc`
-
-### Customization and Extensions
-
-## Mode 1: Permission Update (`remove_user_completely=False`)
-Used when changing a user's permission level (e.g., from readonly to readwrite):
-```python
-# Revokes all existing permissions 
-if remove_user_completely:
-    revoke_inheritance_command = f'REVOKE "{username}" FROM postgres'
-    if not self.execute_sql_safely(cursor, revoke_inheritance_command):
-        logger.warning(f"Failed to revoke inheritance: {revoke_inheritance_command}")
-        success = False
-    else:
-        logger.info(f"Successfully revoked inheritance for user {username} (user will be completely removed)")
-else:
-    logger.info(f"Keeping inheritance for user {username} (permissions can be regranted later)")
-```
-
-
-The project includes a `pseudocode/` directory with examples and guides for customizing the default behavior:
-
-- **`pseudocode/README.md`**: Overview of customization approaches
-- **`pseudocode/revoke_object_permissions.md`**: Examples for custom permission revocation logic
-
-These pseudocode examples demonstrate how to:
-- Implement role-based permission strategies
-- Add audit trails and logging
-- Create conditional permission logic
-- Integrate with external systems
-- Optimize performance for specific use cases
-
-See the `pseudocode/` directory for detailed implementation examples and best practices.
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+1. Read the architecture documentation
+2. Understand the service responsibilities
+3. Follow the component patterns
+4. Add comprehensive tests
+5. Update documentation
 
-## 🆘 Support
+## 📞 Support
 
-For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the logs for debugging information
+- **Documentation**: [md/](./md/) directory
+- **API Docs**: http://localhost:8080/docs
+- **Issues**: GitHub Issues
+- **Email**: support@your-org.com
 
-## 🔄 Version History
+## 📄 License
 
-- **v0.1.0**: Initial release with FastAPI/Flask service and Terraform/Pulumi infrastructure
+This project is licensed under the MIT License.
 
 ---
 
-**Note**: This solution is designed for production use but should be thoroughly tested in your specific environment before deployment.
+## 🔄 Documentation Updates
+
+This documentation is maintained alongside the codebase. When making changes:
+
+1. Update relevant documentation files
+2. Ensure examples are current
+3. Test all code examples
+4. Update version numbers
+5. Review for accuracy and completeness
+
+For questions or suggestions about the documentation, please open an issue or submit a pull request.

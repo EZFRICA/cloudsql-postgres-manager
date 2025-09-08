@@ -116,10 +116,11 @@ def to_dict()
 **Purpose**: Built-in role definitions for common use cases.
 
 ### Role Types
-- **Reader Roles**: `reader_{schema_name}`
-- **Writer Roles**: `writer_{schema_name}`
-- **Admin Roles**: `admin_{schema_name}`
-- **App Roles**: `app_{schema_name}`
+- **Reader Roles**: `{db_name}_{schema_name}_reader`
+- **Writer Roles**: `{db_name}_{schema_name}_writer`
+- **Admin Roles**: `{db_name}_{schema_name}_admin`
+- **Monitor Roles**: `{db_name}_monitor`
+- **Analyst Roles**: `{db_name}_{schema_name}_analyst`
 
 ### Permission Levels
 - **Readonly**: SELECT permissions only
@@ -131,16 +132,16 @@ def to_dict()
 def get_role_definitions(self, database_name, schema_name):
     return [
         RoleDefinition(
-            name=f"reader_{schema_name}",
+            name=f"{database_name}_{schema_name}_reader",
             version="1.0.0",
             checksum="abc123...",
             sql_commands=[
-                f'CREATE ROLE "reader_{schema_name}"',
-                f'GRANT USAGE ON SCHEMA "{schema_name}" TO "reader_{schema_name}"',
-                f'GRANT SELECT ON ALL TABLES IN SCHEMA "{schema_name}" TO "reader_{schema_name}"'
+                f'CREATE ROLE "{database_name}_{schema_name}_reader" NOLOGIN;',
+                f'GRANT USAGE ON SCHEMA "{schema_name}" TO "{database_name}_{schema_name}_reader";',
+                f'GRANT SELECT ON ALL TABLES IN SCHEMA "{schema_name}" TO "{database_name}_{schema_name}_reader";'
             ],
-            inherits=["readonly"],
-            native_roles=["readonly"],
+            inherits=[],
+            native_roles=[],
             created_at=datetime.now(),
             status="active"
         )
@@ -159,17 +160,17 @@ class CustomRolePlugin(RolePlugin):
     def get_role_definitions(self, database_name, schema_name):
         return [
             RoleDefinition(
-                name=f"analyst_{schema_name}",
+                name=f"{database_name}_{schema_name}_analyst",
                 version="1.0.0",
                 checksum=self._calculate_checksum(),
                 sql_commands=[
-                    f'CREATE ROLE "analyst_{schema_name}"',
-                    f'GRANT USAGE ON SCHEMA "{schema_name}" TO "analyst_{schema_name}"',
-                    f'GRANT SELECT ON ALL TABLES IN SCHEMA "{schema_name}" TO "analyst_{schema_name}"',
-                    f'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA "{schema_name}" TO "analyst_{schema_name}"'
+                    f'CREATE ROLE "{database_name}_{schema_name}_analyst" NOLOGIN;',
+                    f'GRANT USAGE ON SCHEMA "{schema_name}" TO "{database_name}_{schema_name}_analyst";',
+                    f'GRANT SELECT ON ALL TABLES IN SCHEMA "{schema_name}" TO "{database_name}_{schema_name}_analyst";',
+                    f'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA "{schema_name}" TO "{database_name}_{schema_name}_analyst"'
                 ],
-                inherits=["reader"],
-                native_roles=["reader"],
+                inherits=[f"{database_name}_{schema_name}_reader"],
+                native_roles=["pg_read_all_stats"],
                 created_at=datetime.now(),
                 status="active"
             )
@@ -231,12 +232,12 @@ for role_def in role_definitions:
   "roles_initialized": true,
   "last_updated": "2024-01-01T00:00:00Z",
   "plugin_roles": {
-    "reader_app_schema": {
+    "my_database_app_schema_reader": {
       "version": "1.0.0",
       "checksum": "abc123...",
       "sql_commands": [...],
-      "inherits": ["readonly"],
-      "native_roles": ["readonly"],
+      "inherits": [],
+      "native_roles": [],
       "created_at": "2024-01-01T00:00:00Z",
       "status": "active"
     }
@@ -271,7 +272,11 @@ def test_standard_role_plugin():
     
     assert len(roles) > 0
     assert all(isinstance(role, RoleDefinition) for role in roles)
-    assert all(role.name.endswith("_test_schema") for role in roles)
+    assert all(role.name.startswith("test_db_") for role in roles)
+    assert any(role.name.endswith("_reader") for role in roles)
+    assert any(role.name.endswith("_writer") for role in roles)
+    assert any(role.name.endswith("_admin") for role in roles)
+    assert any(role.name == "test_db_monitor" for role in roles)
 
 def test_custom_role_plugin():
     plugin = CustomRolePlugin()
@@ -280,6 +285,7 @@ def test_custom_role_plugin():
     # Test custom role logic
     analyst_roles = [r for r in roles if "analyst" in r.name]
     assert len(analyst_roles) > 0
+    assert all(role.name.startswith("test_db_") for role in analyst_roles)
 ```
 
 ### Integration Testing

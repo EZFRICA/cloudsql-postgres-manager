@@ -243,7 +243,7 @@ Initialize roles for a database schema.
 {
   "success": true,
   "message": "Role initialization completed. Created: 3, Updated: 0, Skipped: 0",
-  "roles_created": ["reader_app_schema", "writer_app_schema", "admin_app_schema"],
+  "roles_created": ["my_database_app_schema_reader", "my_database_app_schema_writer", "my_database_app_schema_admin"],
   "roles_updated": [],
   "roles_skipped": [],
   "total_roles": 3,
@@ -263,7 +263,7 @@ Assign a role to a user.
   "database_name": "my-database",
   "schema_name": "app_schema",
   "username": "user@project.iam.gserviceaccount.com",
-  "role_name": "reader_app_schema",
+  "role_name": "my_database_app_schema_reader",
   "region": "europe-west1"
 }
 ```
@@ -274,7 +274,7 @@ Assign a role to a user.
   "success": true,
   "message": "Role assigned successfully",
   "username": "user@project.iam",
-  "role_name": "reader_app_schema",
+  "role_name": "my_database_app_schema_reader",
   "schema_name": "app_schema",
   "project_id": "my-project",
   "instance_name": "my-instance",
@@ -294,7 +294,7 @@ Revoke a role from a user.
   "database_name": "my-database",
   "schema_name": "app_schema",
   "username": "user@project.iam.gserviceaccount.com",
-  "role_name": "reader_app_schema",
+  "role_name": "my_database_app_schema_reader",
   "region": "europe-west1"
 }
 ```
@@ -305,7 +305,7 @@ Revoke a role from a user.
   "success": true,
   "message": "Role revoked successfully",
   "username": "user@project.iam",
-  "role_name": "reader_app_schema",
+  "role_name": "my_database_app_schema_reader",
   "schema_name": "app_schema",
   "project_id": "my-project",
   "instance_name": "my-instance",
@@ -336,12 +336,12 @@ List users and their roles for a schema.
   "users": [
     {
       "username": "user1@project.iam",
-      "roles": ["reader_app_schema"],
+      "roles": ["my_database_app_schema_reader"],
       "permissions": ["SELECT"]
     },
     {
       "username": "user2@project.iam",
-      "roles": ["writer_app_schema"],
+      "roles": ["my_database_app_schema_writer"],
       "permissions": ["SELECT", "INSERT", "UPDATE", "DELETE"]
     }
   ],
@@ -372,10 +372,11 @@ List all available roles in a database.
   "success": true,
   "message": "Retrieved 5 roles",
   "roles": [
-    "reader_app_schema",
-    "writer_app_schema",
-    "admin_app_schema",
-    "analyst_app_schema",
+    "my_database_app_schema_reader",
+    "my_database_app_schema_writer",
+    "my_database_app_schema_admin",
+    "my_database_app_schema_analyst",
+    "my_database_monitor",
     "custom_role"
   ],
   "project_id": "my-project",
