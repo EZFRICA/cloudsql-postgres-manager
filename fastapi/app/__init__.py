@@ -29,7 +29,7 @@ __description__ = "Comprehensive Cloud SQL PostgreSQL management with IAM integr
 __url__ = "https://github.com/yourorg/cloudsql-postgres-manager"
 
 # Version info tuple
-__version_info__ = tuple(int(i) for i in __version__.split('.'))
+__version_info__ = tuple(int(i) for i in __version__.split("."))
 
 # Import key components for easy access
 from .config import get_database_config, get_firestore_config
@@ -50,7 +50,7 @@ from .models import (
     RoleInitializeRequest,
     RoleInitializeResponse,
     HealthResponse,
-    ErrorResponse
+    ErrorResponse,
 )
 
 # Utilities
@@ -68,14 +68,11 @@ __all__ = [
     "__author__",
     "__title__",
     "__description__",
-
     # Core application
     "app",
-
     # Configuration
     "get_database_config",
     "get_firestore_config",
-
     # Services
     "ConnectionManager",
     "UserManager",
@@ -83,7 +80,6 @@ __all__ = [
     "RolePermissionManager",
     "RoleManager",
     "FirestoreRoleRegistryManager",
-
     # Models
     "IAMUser",
     "IAMUserRequest",
@@ -91,21 +87,21 @@ __all__ = [
     "RoleInitializeResponse",
     "HealthResponse",
     "ErrorResponse",
-
     # Utilities
     "logger",
     "PostgreSQLValidator",
-
     # Plugin system
     "PluginRegistry",
     "RoleDefinition",
     "RolePlugin",
 ]
 
+
 # Package initialization
 def get_version():
     """Get the current version of the package."""
     return __version__
+
 
 def get_package_info():
     """Get comprehensive package information."""
@@ -117,6 +113,7 @@ def get_package_info():
         "license": __license__,
         "url": __url__,
     }
+
 
 # Initialize logging on package import
 logger.info(f"Initializing {__title__} v{__version__}")

@@ -10,7 +10,7 @@ from app.models import ErrorResponse
 
 def register_error_handlers(app):
     """Register all error handlers with the FastAPI app."""
-    
+
     @app.exception_handler(404)
     async def not_found_handler(request: Request, exc):
         """Handler for 404 errors"""

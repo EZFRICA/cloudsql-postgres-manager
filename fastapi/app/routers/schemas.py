@@ -19,11 +19,11 @@ schema_manager = SchemaManager(connection_manager)
 async def create_schema(request: SchemaCreateRequest):
     """
     Create a schema in the database.
-    
+
     This endpoint creates a PostgreSQL schema in the specified database.
-    The schema creation is idempotent - if the schema already exists, 
+    The schema creation is idempotent - if the schema already exists,
     the operation will succeed without error.
-    
+
     **Features:**
     - Idempotent: Safe to call multiple times
     - Schema validation: Ensures proper PostgreSQL naming conventions
@@ -31,12 +31,12 @@ async def create_schema(request: SchemaCreateRequest):
     - Optional owner: Specify IAM user or service account as schema owner (defaults to postgres)
     - Error handling: Comprehensive error reporting
     - Transaction safety: Automatic rollback on failure
-    
+
     **Use Cases:**
     - Prepare database for application deployment
     - Create isolated schemas for different environments
     - Set up multi-tenant database structures
-    
+
     **Example:**
     ```json
     {
@@ -55,26 +55,26 @@ async def create_schema(request: SchemaCreateRequest):
             f"instance: {request.instance_name}, database: {request.database_name}, "
             f"schema: {request.schema_name}"
         )
-        
+
         result = schema_manager.create_schema(
             project_id=request.project_id,
             region=request.region,
             instance_name=request.instance_name,
             database_name=request.database_name,
             schema_name=request.schema_name,
-            owner=request.owner
+            owner=request.owner,
         )
-        
+
         if result["success"]:
             logger.info(f"Schema creation successful: {result['message']}")
         else:
             logger.error(f"Schema creation failed: {result['message']}")
-        
+
         return SchemaCreateResponse(**result)
-        
+
     except Exception as e:
         logger.error(f"Schema creation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Schema creation failed: {str(e)}"
+            detail=f"Schema creation failed: {str(e)}",
         )

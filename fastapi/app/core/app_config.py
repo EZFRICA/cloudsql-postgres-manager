@@ -10,7 +10,7 @@ from app.utils.logging_config import logger
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
-    
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         """Manage application lifecycle"""
@@ -78,23 +78,20 @@ def create_app() -> FastAPI:
             "name": "Cloud SQL IAM User Permission Manager",
         },
         openapi_tags=[
-            {
-                "name": "Health",
-                "description": "Health check and monitoring endpoints"
-            },
+            {"name": "Health", "description": "Health check and monitoring endpoints"},
             {
                 "name": "Role Management",
-                "description": "Role assignment, revocation, and management operations"
+                "description": "Role assignment, revocation, and management operations",
             },
             {
-                "name": "Schema Management", 
-                "description": "Database schema creation and management"
+                "name": "Schema Management",
+                "description": "Database schema creation and management",
             },
             {
                 "name": "Database Management",
-                "description": "Database health, schema listing, and table operations"
-            }
-        ]
+                "description": "Database health, schema listing, and table operations",
+            },
+        ],
     )
-    
+
     return app

@@ -10,15 +10,22 @@ from .database_validator import DatabaseValidator
 class RolePermissionManager:
     """Manager for role and permission operations"""
 
-    def __init__(self, connection_manager: ConnectionManager, schema_manager: SchemaManager, user_manager: UserManager):
+    def __init__(
+        self,
+        connection_manager: ConnectionManager,
+        schema_manager: SchemaManager,
+        user_manager: UserManager,
+    ):
         self.connection_manager = connection_manager
         self.schema_manager = schema_manager
         self.user_manager = user_manager
 
-    def verify_schema_roles_initialized(self, cursor, database_name: str, schema_name: str) -> bool:
+    def verify_schema_roles_initialized(
+        self, cursor, database_name: str, schema_name: str
+    ) -> bool:
         """
         Verify that standard system roles are initialized for the given schema.
-        
+
         This method checks if all the standard system roles exist, which indicates that the schema
         was created through the role initialization process and has the proper
         standard roles (reader, writer, admin, monitor, analyst) set up.
@@ -35,124 +42,145 @@ class RolePermissionManager:
             # Define all expected system roles for this schema
             expected_roles = [
                 f"{database_name}_{schema_name}_reader",
-                f"{database_name}_{schema_name}_writer", 
+                f"{database_name}_{schema_name}_writer",
                 f"{database_name}_{schema_name}_admin",
                 f"{database_name}_{schema_name}_analyst",
-                f"{database_name}_monitor"  # Database-wide role
+                f"{database_name}_monitor",  # Database-wide role
             ]
-            
+
             # Check if schema exists
             if not DatabaseValidator.schema_exists(cursor, schema_name):
                 logger.warning(f"Schema '{schema_name}' does not exist.")
                 return False
-            
+
             # Check if all expected system roles exist
             missing_roles = []
             for role in expected_roles:
                 if not DatabaseValidator.role_exists(cursor, role):
                     missing_roles.append(role)
-            
+
             if missing_roles:
-                logger.warning(f"Missing system roles for schema '{schema_name}': {missing_roles}")
+                logger.warning(
+                    f"Missing system roles for schema '{schema_name}': {missing_roles}"
+                )
                 return False
-                
-            logger.info(f"All system roles are properly initialized for schema '{schema_name}'")
+
+            logger.info(
+                f"All system roles are properly initialized for schema '{schema_name}'"
+            )
             return True
 
         except Exception as e:
-            logger.error(f"Error verifying roles initialization for schema '{schema_name}': {e}")
+            logger.error(
+                f"Error verifying roles initialization for schema '{schema_name}': {e}"
+            )
             return False
 
-    def is_system_role(self, role_name: str, database_name: str, schema_name: str) -> bool:
+    def is_system_role(
+        self, role_name: str, database_name: str, schema_name: str
+    ) -> bool:
         """
         Check if a role is a system role created by our role initialization process.
-        
+
         Args:
             role_name: Role name to check
             database_name: Database name
             schema_name: Schema name
-            
+
         Returns:
             True if it's a system role, False otherwise
         """
         system_role_patterns = [
             f"{database_name}_{schema_name}_reader",
-            f"{database_name}_{schema_name}_writer", 
+            f"{database_name}_{schema_name}_writer",
             f"{database_name}_{schema_name}_admin",
             f"{database_name}_{schema_name}_analyst",
-            f"{database_name}_monitor"
+            f"{database_name}_monitor",
         ]
-        
+
         return role_name in system_role_patterns
 
-    def validate_role_assignment(self, cursor, username: str, role_name: str, database_name: str, schema_name: str) -> Dict[str, any]:
+    def validate_role_assignment(
+        self,
+        cursor,
+        username: str,
+        role_name: str,
+        database_name: str,
+        schema_name: str,
+    ) -> Dict[str, any]:
         """
         Validate if a role can be assigned to a user
-        
+
         Args:
             cursor: Database cursor
             username: Username to validate
             role_name: Role name to validate
             database_name: Database name
             schema_name: Schema name
-            
+
         Returns:
             Dictionary with validation results
         """
         try:
-            normalized_username = DatabaseValidator.normalize_service_account_name(username)
-            
+            normalized_username = DatabaseValidator.normalize_service_account_name(
+                username
+            )
+
             # Check if user is a valid IAM user
             user_validation = self.user_manager.is_valid_iam_user(cursor, username)
             if not user_validation["valid"]:
                 return {
                     "valid": False,
                     "reason": f"User validation failed: {user_validation['reason']}",
-                    "user_type": user_validation.get("user_type", "unknown")
+                    "user_type": user_validation.get("user_type", "unknown"),
                 }
-            
+
             # Check if schema exists
             if not DatabaseValidator.schema_exists(cursor, schema_name):
                 return {
                     "valid": False,
                     "reason": f"Schema '{schema_name}' does not exist",
-                    "schema_status": "missing"
+                    "schema_status": "missing",
                 }
-            
+
             # Check if this is a system role (before database queries)
             is_system_role = self.is_system_role(role_name, database_name, schema_name)
-            
+
             # Check if roles are initialized for the schema
-            if not self.verify_schema_roles_initialized(cursor, database_name, schema_name):
+            if not self.verify_schema_roles_initialized(
+                cursor, database_name, schema_name
+            ):
                 return {
                     "valid": False,
                     "reason": f"System roles not initialized for schema '{schema_name}'",
-                    "schema_status": "not_initialized"
+                    "schema_status": "not_initialized",
                 }
-            
+
             # Check if role exists
             if not DatabaseValidator.role_exists(cursor, role_name):
                 return {
                     "valid": False,
                     "reason": f"Role '{role_name}' does not exist",
-                    "role_type": "missing"
+                    "role_type": "missing",
                 }
-            
+
             return {
                 "valid": True,
                 "reason": "All validations passed",
                 "normalized_username": normalized_username,
                 "user_type": user_validation["user_type"],
                 "role_type": "system_role" if is_system_role else "custom_role",
-                "is_system_role": is_system_role
+                "is_system_role": is_system_role,
             }
-            
+
         except Exception as e:
-            logger.error(f"Error validating role assignment for user {username}, role {role_name}: {e}")
+            logger.error(
+                f"Error validating role assignment for user {username}, role {role_name}: {e}"
+            )
             return {
                 "valid": False,
                 "reason": f"Validation error: {str(e)}",
-                "error": str(e)
+                "error": str(e),
             }
 
     def revoke_all_permissions(
@@ -160,7 +188,7 @@ class RolePermissionManager:
     ) -> bool:
         """
         Revoke all permissions from an IAM user by removing all assigned roles.
-        
+
         This method now uses the role-based system instead of executing complex SQL queries.
         The actual permissions are managed by the plugin system through role definitions.
 
@@ -192,11 +220,11 @@ class RolePermissionManager:
                 WHERE u.rolname = %s
                 AND r.rolname LIKE %s
                 """,
-                (username, f"{database_name}_{schema_name}_%")
+                (username, f"{database_name}_{schema_name}_%"),
             )
-            
+
             assigned_roles = [row[0] for row in cursor.fetchall()]
-            
+
             if not assigned_roles:
                 logger.info(f"User {username} has no roles to revoke")
                 return True
@@ -213,9 +241,13 @@ class RolePermissionManager:
                     success = False
 
             if success:
-                logger.info(f"Successfully revoked all roles and permissions for user {username}")
+                logger.info(
+                    f"Successfully revoked all roles and permissions for user {username}"
+                )
             else:
-                logger.warning(f"Some permission revocations failed for user {username}")
+                logger.warning(
+                    f"Some permission revocations failed for user {username}"
+                )
 
             return success
 
@@ -233,7 +265,7 @@ class RolePermissionManager:
     ) -> bool:
         """
         Grant permissions by assigning the appropriate role to an existing IAM user.
-        
+
         This method now uses the role-based system instead of executing complex SQL queries.
         The actual permissions are managed by the plugin system through role definitions.
         """
@@ -254,12 +286,16 @@ class RolePermissionManager:
 
             # Verify that this is a system role (created by our role initialization)
             if not self.is_system_role(target_role, database_name, schema_name):
-                logger.error(f"Role '{target_role}' is not a system role. Only system roles can be assigned through this method.")
+                logger.error(
+                    f"Role '{target_role}' is not a system role. Only system roles can be assigned through this method."
+                )
                 return False
 
             # Check if the target role exists
             if not DatabaseValidator.role_exists(cursor, target_role):
-                logger.error(f"Target role '{target_role}' does not exist. Please initialize roles first.")
+                logger.error(
+                    f"Target role '{target_role}' does not exist. Please initialize roles first."
+                )
                 return False
 
             # Check if user already has this role (idempotency)
@@ -313,7 +349,9 @@ class RolePermissionManager:
         """
         try:
             # Normalize username (in case it contains .gserviceaccount.com)
-            normalized_username = DatabaseValidator.normalize_service_account_name(username)
+            normalized_username = DatabaseValidator.normalize_service_account_name(
+                username
+            )
 
             # Validate that this is a manageable IAM user
             validation = self.user_manager.is_valid_iam_user(cursor, username)
@@ -328,8 +366,12 @@ class RolePermissionManager:
             )
 
             # Verify that standard roles are initialized for this schema
-            if not self.verify_schema_roles_initialized(cursor, database_name, schema_name):
-                logger.error(f"Roles not initialized for schema '{schema_name}'. Please run role initialization first.")
+            if not self.verify_schema_roles_initialized(
+                cursor, database_name, schema_name
+            ):
+                logger.error(
+                    f"Roles not initialized for schema '{schema_name}'. Please run role initialization first."
+                )
                 return False
 
             # 1. Clean existing permissions
@@ -353,11 +395,19 @@ class RolePermissionManager:
             logger.error(f"Error updating permissions for user {username}: {e}")
             return False
 
-    def assign_role(self, project_id: str, region: str, instance_name: str, 
-                   database_name: str, schema_name: str, username: str, role_name: str) -> dict:
+    def assign_role(
+        self,
+        project_id: str,
+        region: str,
+        instance_name: str,
+        database_name: str,
+        schema_name: str,
+        username: str,
+        role_name: str,
+    ) -> dict:
         """
         Assign a role to a user.
-        
+
         Args:
             project_id: GCP project ID
             region: Instance region
@@ -366,20 +416,24 @@ class RolePermissionManager:
             schema_name: Schema name
             username: Username to assign role to
             role_name: Role name to assign
-            
+
         Returns:
             Dictionary with operation result
         """
         start_time = time.time()
-        
+
         try:
-            with self.connection_manager.get_connection(project_id, region, instance_name, database_name) as conn:
+            with self.connection_manager.get_connection(
+                project_id, region, instance_name, database_name
+            ) as conn:
                 cursor = conn.cursor()
-                
+
                 try:
                     # Normalize username
-                    normalized_username = DatabaseValidator.normalize_service_account_name(username)
-                    
+                    normalized_username = (
+                        DatabaseValidator.normalize_service_account_name(username)
+                    )
+
                     # Validate that this is a manageable IAM user
                     validation = self.user_manager.is_valid_iam_user(cursor, username)
                     if not validation["valid"]:
@@ -394,9 +448,9 @@ class RolePermissionManager:
                             "schema_name": schema_name,
                             "validation_reason": validation["reason"],
                             "user_type": validation.get("user_type", "unknown"),
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     # Check if role exists
                     if not DatabaseValidator.role_exists(cursor, role_name):
                         return {
@@ -408,12 +462,16 @@ class RolePermissionManager:
                             "instance_name": instance_name,
                             "database_name": database_name,
                             "schema_name": schema_name,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     # Check if user already has this role
-                    if DatabaseValidator.has_role(cursor, normalized_username, role_name):
-                        logger.info(f"User {normalized_username} already has role {role_name}")
+                    if DatabaseValidator.has_role(
+                        cursor, normalized_username, role_name
+                    ):
+                        logger.info(
+                            f"User {normalized_username} already has role {role_name}"
+                        )
                         return {
                             "success": True,
                             "message": f"User {normalized_username} already has role {role_name}",
@@ -424,12 +482,14 @@ class RolePermissionManager:
                             "database_name": database_name,
                             "schema_name": schema_name,
                             "already_assigned": True,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     # Assign role
                     grant_command = f'GRANT "{role_name}" TO "{normalized_username}"'
-                    if not self.connection_manager.execute_sql_safely(cursor, grant_command):
+                    if not self.connection_manager.execute_sql_safely(
+                        cursor, grant_command
+                    ):
                         return {
                             "success": False,
                             "message": f"Failed to assign role {role_name} to user {normalized_username}",
@@ -439,12 +499,14 @@ class RolePermissionManager:
                             "instance_name": instance_name,
                             "database_name": database_name,
                             "schema_name": schema_name,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     conn.commit()
-                    logger.info(f"Successfully assigned role {role_name} to user {normalized_username}")
-                    
+                    logger.info(
+                        f"Successfully assigned role {role_name} to user {normalized_username}"
+                    )
+
                     return {
                         "success": True,
                         "message": f"Role {role_name} assigned to user {normalized_username}",
@@ -454,15 +516,15 @@ class RolePermissionManager:
                         "instance_name": instance_name,
                         "database_name": database_name,
                         "schema_name": schema_name,
-                        "execution_time_seconds": time.time() - start_time
+                        "execution_time_seconds": time.time() - start_time,
                     }
-                    
+
                 except Exception as e:
                     conn.rollback()
                     raise e
                 finally:
                     cursor.close()
-                    
+
         except Exception as e:
             logger.error(f"Failed to assign role {role_name} to user {username}: {e}")
             return {
@@ -474,14 +536,22 @@ class RolePermissionManager:
                 "instance_name": instance_name,
                 "database_name": database_name,
                 "schema_name": schema_name,
-                "execution_time_seconds": time.time() - start_time
+                "execution_time_seconds": time.time() - start_time,
             }
 
-    def revoke_role(self, project_id: str, region: str, instance_name: str, 
-                   database_name: str, schema_name: str, username: str, role_name: str) -> dict:
+    def revoke_role(
+        self,
+        project_id: str,
+        region: str,
+        instance_name: str,
+        database_name: str,
+        schema_name: str,
+        username: str,
+        role_name: str,
+    ) -> dict:
         """
         Revoke a role from a user.
-        
+
         Args:
             project_id: GCP project ID
             region: Instance region
@@ -490,20 +560,24 @@ class RolePermissionManager:
             schema_name: Schema name
             username: Username to revoke role from
             role_name: Role name to revoke
-            
+
         Returns:
             Dictionary with operation result
         """
         start_time = time.time()
-        
+
         try:
-            with self.connection_manager.get_connection(project_id, region, instance_name, database_name) as conn:
+            with self.connection_manager.get_connection(
+                project_id, region, instance_name, database_name
+            ) as conn:
                 cursor = conn.cursor()
-                
+
                 try:
                     # Normalize username
-                    normalized_username = DatabaseValidator.normalize_service_account_name(username)
-                    
+                    normalized_username = (
+                        DatabaseValidator.normalize_service_account_name(username)
+                    )
+
                     # Check if user exists
                     if not self.user_manager.user_exists(cursor, username):
                         return {
@@ -515,9 +589,9 @@ class RolePermissionManager:
                             "instance_name": instance_name,
                             "database_name": database_name,
                             "schema_name": schema_name,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     # Check if role exists
                     if not DatabaseValidator.role_exists(cursor, role_name):
                         return {
@@ -529,12 +603,16 @@ class RolePermissionManager:
                             "instance_name": instance_name,
                             "database_name": database_name,
                             "schema_name": schema_name,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     # Revoke role
-                    revoke_command = f'REVOKE "{role_name}" FROM "{normalized_username}"'
-                    if not self.connection_manager.execute_sql_safely(cursor, revoke_command):
+                    revoke_command = (
+                        f'REVOKE "{role_name}" FROM "{normalized_username}"'
+                    )
+                    if not self.connection_manager.execute_sql_safely(
+                        cursor, revoke_command
+                    ):
                         return {
                             "success": False,
                             "message": f"Failed to revoke role {role_name} from user {normalized_username}",
@@ -544,12 +622,14 @@ class RolePermissionManager:
                             "instance_name": instance_name,
                             "database_name": database_name,
                             "schema_name": schema_name,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     conn.commit()
-                    logger.info(f"Successfully revoked role {role_name} from user {normalized_username}")
-                    
+                    logger.info(
+                        f"Successfully revoked role {role_name} from user {normalized_username}"
+                    )
+
                     return {
                         "success": True,
                         "message": f"Role {role_name} revoked from user {normalized_username}",
@@ -559,15 +639,15 @@ class RolePermissionManager:
                         "instance_name": instance_name,
                         "database_name": database_name,
                         "schema_name": schema_name,
-                        "execution_time_seconds": time.time() - start_time
+                        "execution_time_seconds": time.time() - start_time,
                     }
-                    
+
                 except Exception as e:
                     conn.rollback()
                     raise e
                 finally:
                     cursor.close()
-                    
+
         except Exception as e:
             logger.error(f"Failed to revoke role {role_name} from user {username}: {e}")
             return {
@@ -579,5 +659,5 @@ class RolePermissionManager:
                 "instance_name": instance_name,
                 "database_name": database_name,
                 "schema_name": schema_name,
-                "execution_time_seconds": time.time() - start_time
+                "execution_time_seconds": time.time() - start_time,
             }

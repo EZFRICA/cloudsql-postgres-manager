@@ -12,7 +12,6 @@ class UserManager:
     def __init__(self, connection_manager: ConnectionManager):
         self.connection_manager = connection_manager
 
-
     def user_exists(self, cursor, username: str) -> bool:
         """
         Check if a user exists in the database and is a valid IAM user
@@ -29,17 +28,19 @@ class UserManager:
     def is_valid_iam_user(self, cursor, username: str) -> Dict[str, any]:
         """
         Validate if a user is a valid IAM user for this application
-        
+
         Args:
             cursor: Database cursor
             username: Username to validate
-            
+
         Returns:
             Dictionary with validation results
         """
         try:
-            normalized_username = DatabaseValidator.normalize_service_account_name(username)
-            
+            normalized_username = DatabaseValidator.normalize_service_account_name(
+                username
+            )
+
             # Check if user exists
             cursor.execute(
                 """
@@ -54,46 +55,54 @@ class UserManager:
                 FROM pg_roles 
                 WHERE rolname = %s
                 """,
-                (normalized_username,)
+                (normalized_username,),
             )
-            
+
             user_info = cursor.fetchone()
             if not user_info:
                 return {
                     "valid": False,
                     "reason": "User does not exist in database",
-                    "username": normalized_username
+                    "username": normalized_username,
                 }
-            
-            rolname, can_login, is_super, can_create_db, can_create_role, can_inherit, can_replicate = user_info
-            
+
+            (
+                rolname,
+                can_login,
+                is_super,
+                can_create_db,
+                can_create_role,
+                can_inherit,
+                can_replicate,
+            ) = user_info
+
             # Check if it's a system role that should be excluded
             if PostgreSQLValidator.is_system_role(rolname):
                 return {
                     "valid": False,
                     "reason": f"User '{rolname}' is a system role and cannot be managed",
                     "username": normalized_username,
-                    "user_type": "system"
+                    "user_type": "system",
                 }
-            
+
             # Check if user can login (required for IAM users)
             if not can_login:
                 return {
                     "valid": False,
                     "reason": f"User '{rolname}' cannot login (rolcanlogin=false)",
                     "username": normalized_username,
-                    "user_type": "non_login"
+                    "user_type": "non_login",
                 }
-            
+
             # Check if it's a PostgreSQL system user
-            if rolname.startswith(('pg_', 'cloudsql')):
+            if rolname.startswith(("pg_", "cloudsql")):
                 return {
                     "valid": False,
                     "reason": f"User '{rolname}' is a PostgreSQL system user",
                     "username": normalized_username,
-                    "user_type": "pg_system"
+                    "user_type": "pg_system",
                 }
-            
+
             return {
                 "valid": True,
                 "reason": "Valid IAM user",
@@ -105,17 +114,17 @@ class UserManager:
                     "can_create_db": can_create_db,
                     "can_create_role": can_create_role,
                     "can_inherit": can_inherit,
-                    "can_replicate": can_replicate
-                }
+                    "can_replicate": can_replicate,
+                },
             }
-            
+
         except Exception as e:
             logger.error(f"Failed to validate IAM user '{username}': {e}")
             return {
                 "valid": False,
                 "reason": f"Validation failed: {str(e)}",
                 "username": username,
-                "error": str(e)
+                "error": str(e),
             }
 
     def get_existing_iam_users(self, cursor) -> List[str]:
@@ -153,7 +162,9 @@ class UserManager:
             )
 
             existing_users = [row[0] for row in cursor.fetchall()]
-            logger.info(f"Found {len(existing_users)} existing IAM users (excluding system and group roles)")
+            logger.info(
+                f"Found {len(existing_users)} existing IAM users (excluding system and group roles)"
+            )
             logger.debug(f"IAM users found: {existing_users}")
             return existing_users
 
@@ -161,33 +172,41 @@ class UserManager:
             logger.error(f"Failed to get existing IAM users: {e}")
             return []
 
-    def get_users_and_roles(self, project_id: str, region: str, instance_name: str, 
-                           database_name: str, schema_name: str) -> dict:
+    def get_users_and_roles(
+        self,
+        project_id: str,
+        region: str,
+        instance_name: str,
+        database_name: str,
+        schema_name: str,
+    ) -> dict:
         """
         Get all IAM users and their assigned roles for a schema.
         Filters out system and group roles that cannot be managed.
-        
+
         Args:
             project_id: GCP project ID
             region: Instance region
             instance_name: Cloud SQL instance name
             database_name: Database name
             schema_name: Schema name
-            
+
         Returns:
             Dictionary with IAM users and their roles
         """
         start_time = time.time()
-        
+
         try:
-            with self.connection_manager.get_connection(project_id, region, instance_name, database_name) as conn:
+            with self.connection_manager.get_connection(
+                project_id, region, instance_name, database_name
+            ) as conn:
                 cursor = conn.cursor()
-                
+
                 try:
                     # Utiliser les rôles système centralisés
                     system_roles = list(PostgreSQLValidator.get_all_system_roles())
                     placeholders = ",".join(["%s"] * len(system_roles))
-                    
+
                     # Get all users with their roles for this schema
                     cursor.execute(
                         f"""
@@ -212,16 +231,23 @@ class UserManager:
                         GROUP BY u.rolname, u.rolcanlogin, u.rolsuper, u.rolcreatedb, u.rolcreaterole
                         ORDER BY u.rolname
                         """,
-                        [f"{database_name}_{schema_name}_%"] + system_roles
+                        [f"{database_name}_{schema_name}_%"] + system_roles,
                     )
-                    
+
                     users = []
                     for row in cursor.fetchall():
-                        username, roles, can_login, is_superuser, can_create_db, can_create_role = row
-                        
+                        (
+                            username,
+                            roles,
+                            can_login,
+                            is_superuser,
+                            can_create_db,
+                            can_create_role,
+                        ) = row
+
                         # Valider que c'est bien un utilisateur IAM gérable
                         validation = self.is_valid_iam_user(cursor, username)
-                        
+
                         user_data = {
                             "username": username,
                             "roles": roles,
@@ -231,22 +257,24 @@ class UserManager:
                                 "can_login": can_login,
                                 "is_superuser": is_superuser,
                                 "can_create_db": can_create_db,
-                                "can_create_role": can_create_role
-                            }
+                                "can_create_role": can_create_role,
+                            },
                         }
-                        
+
                         # Ajouter des informations de validation si non valide
                         if not validation["valid"]:
                             user_data["validation_reason"] = validation["reason"]
-                        
+
                         users.append(user_data)
-                    
+
                     # Séparer les utilisateurs valides des non-valides pour le rapport
                     valid_users = [u for u in users if u["is_iam_user"]]
                     invalid_users = [u for u in users if not u["is_iam_user"]]
-                    
-                    logger.info(f"Found {len(valid_users)} valid IAM users and {len(invalid_users)} system/invalid users for schema {schema_name}")
-                    
+
+                    logger.info(
+                        f"Found {len(valid_users)} valid IAM users and {len(invalid_users)} system/invalid users for schema {schema_name}"
+                    )
+
                     return {
                         "success": True,
                         "message": f"Retrieved {len(valid_users)} manageable IAM users ({len(invalid_users)} system users excluded)",
@@ -256,14 +284,14 @@ class UserManager:
                         "instance_name": instance_name,
                         "database_name": database_name,
                         "schema_name": schema_name,
-                        "execution_time_seconds": time.time() - start_time
+                        "execution_time_seconds": time.time() - start_time,
                     }
-                    
+
                 except Exception as e:
                     raise e
                 finally:
                     cursor.close()
-                    
+
         except Exception as e:
             logger.error(f"Failed to get users and roles: {e}")
             return {
@@ -275,17 +303,17 @@ class UserManager:
                 "instance_name": instance_name,
                 "database_name": database_name,
                 "schema_name": schema_name,
-                "execution_time_seconds": time.time() - start_time
+                "execution_time_seconds": time.time() - start_time,
             }
 
     def get_system_roles_info(self, cursor) -> Dict[str, any]:
         """
         Get information about all system roles in the database
         Useful for debugging and understanding the IAM setup
-        
+
         Args:
             cursor: Database cursor
-            
+
         Returns:
             Dictionary with system roles information
         """
@@ -293,7 +321,7 @@ class UserManager:
             # Préparer les listes de rôles pour la catégorisation
             admin_roles = list(PostgreSQLValidator.get_cloud_sql_admin_roles())
             iam_group_roles = list(PostgreSQLValidator.get_cloud_sql_iam_group_roles())
-            
+
             cursor.execute(
                 """
                 SELECT 
@@ -318,20 +346,29 @@ class UserManager:
                 FROM pg_roles
                 ORDER BY role_category, rolname
                 """,
-                (admin_roles, iam_group_roles)
+                (admin_roles, iam_group_roles),
             )
-            
+
             roles_info = {
                 "database_admin": [],
                 "iam_group_role": [],
                 "postgresql_system": [],
                 "cloudsql_system": [],
-                "iam_user": []
+                "iam_user": [],
             }
-            
+
             for row in cursor.fetchall():
-                rolname, can_login, is_super, can_create_db, can_create_role, can_inherit, can_replicate, category = row
-                
+                (
+                    rolname,
+                    can_login,
+                    is_super,
+                    can_create_db,
+                    can_create_role,
+                    can_inherit,
+                    can_replicate,
+                    category,
+                ) = row
+
                 role_info = {
                     "name": rolname,
                     "can_login": can_login,
@@ -339,54 +376,61 @@ class UserManager:
                     "can_create_db": can_create_db,
                     "can_create_role": can_create_role,
                     "can_inherit": can_inherit,
-                    "can_replicate": can_replicate
+                    "can_replicate": can_replicate,
                 }
-                
+
                 roles_info[category].append(role_info)
-            
+
             # Statistiques
             stats = {
                 "total_roles": sum(len(roles) for roles in roles_info.values()),
                 "manageable_iam_users": len(roles_info["iam_user"]),
-                "system_roles": len(roles_info["database_admin"]) + len(roles_info["postgresql_system"]) + len(roles_info["cloudsql_system"]),
-                "iam_group_roles": len(roles_info["iam_group_role"])
+                "system_roles": len(roles_info["database_admin"])
+                + len(roles_info["postgresql_system"])
+                + len(roles_info["cloudsql_system"]),
+                "iam_group_roles": len(roles_info["iam_group_role"]),
             }
-            
+
             return {
                 "success": True,
                 "roles_by_category": roles_info,
                 "statistics": stats,
-                "message": f"Found {stats['manageable_iam_users']} manageable IAM users out of {stats['total_roles']} total roles"
-            }
-            
-        except Exception as e:
-            logger.error(f"Failed to get system roles info: {e}")
-            return {
-                "success": False,
-                "error": str(e)
+                "message": f"Found {stats['manageable_iam_users']} manageable IAM users out of {stats['total_roles']} total roles",
             }
 
-    def grant_user_to_postgres(self, project_id: str, region: str, instance_name: str, 
-                              database_name: str, username: str) -> dict:
+        except Exception as e:
+            logger.error(f"Failed to get system roles info: {e}")
+            return {"success": False, "error": str(e)}
+
+    def grant_user_to_postgres(
+        self,
+        project_id: str,
+        region: str,
+        instance_name: str,
+        database_name: str,
+        username: str,
+    ) -> dict:
         """
         Grant an IAM user to postgres to allow postgres to manage this user.
-        
+
         Args:
             project_id: GCP project ID
             region: Instance region
             instance_name: Cloud SQL instance name
             database_name: Database name
             username: IAM username
-            
+
         Returns:
             Dictionary with operation result
         """
         start_time = time.time()
-        
+
         try:
-            with self.connection_manager.get_connection(project_id, region, instance_name, database_name) as conn:
+            with self.connection_manager.get_connection(
+                project_id, region, instance_name, database_name
+            ) as conn:
                 cursor = conn.cursor()
-                
+
                 try:
                     # Validate that this is a manageable IAM user
                     validation = self.is_valid_iam_user(cursor, username)
@@ -397,11 +441,11 @@ class UserManager:
                             "username": username,
                             "validation_reason": validation["reason"],
                             "user_type": validation.get("user_type", "unknown"),
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     normalized_username = validation["normalized_username"]
-                    
+
                     # Check if postgres already inherits permissions from this user
                     cursor.execute(
                         """
@@ -411,78 +455,92 @@ class UserManager:
                         WHERE r1.rolname = 'postgres' 
                         AND r2.rolname = %s
                         """,
-                        (normalized_username,)
+                        (normalized_username,),
                     )
-                    
+
                     if cursor.fetchone():
                         return {
                             "success": True,
                             "message": f"postgres already has inheritance from user {normalized_username}",
                             "username": username,
                             "already_granted": True,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     # Grant the IAM user TO postgres
                     grant_command = f'GRANT "{normalized_username}" TO postgres'
-                    if not self.connection_manager.execute_sql_safely(cursor, grant_command):
+                    if not self.connection_manager.execute_sql_safely(
+                        cursor, grant_command
+                    ):
                         return {
                             "success": False,
                             "message": f"Failed to grant user {normalized_username} to postgres",
                             "username": username,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     conn.commit()
-                    logger.info(f"Successfully granted {normalized_username} TO postgres")
-                    
+                    logger.info(
+                        f"Successfully granted {normalized_username} TO postgres"
+                    )
+
                     return {
                         "success": True,
                         "message": f"User {normalized_username} granted to postgres successfully",
                         "username": username,
                         "normalized_username": normalized_username,
-                        "execution_time_seconds": time.time() - start_time
+                        "execution_time_seconds": time.time() - start_time,
                     }
-                    
+
                 except Exception as e:
                     conn.rollback()
                     raise e
                 finally:
                     cursor.close()
-                    
+
         except Exception as e:
             logger.error(f"Failed to grant user {username} to postgres: {e}")
             return {
                 "success": False,
                 "message": f"Failed to grant user to postgres: {str(e)}",
                 "username": username,
-                "execution_time_seconds": time.time() - start_time
+                "execution_time_seconds": time.time() - start_time,
             }
 
-    def revoke_user_from_postgres(self, project_id: str, region: str, instance_name: str, 
-                                 database_name: str, username: str) -> dict:
+    def revoke_user_from_postgres(
+        self,
+        project_id: str,
+        region: str,
+        instance_name: str,
+        database_name: str,
+        username: str,
+    ) -> dict:
         """
         Revoke an IAM user from postgres (remove inheritance).
-        
+
         Args:
             project_id: GCP project ID
             region: Instance region
             instance_name: Cloud SQL instance name
             database_name: Database name
             username: IAM username
-            
+
         Returns:
             Dictionary with operation result
         """
         start_time = time.time()
-        
+
         try:
-            with self.connection_manager.get_connection(project_id, region, instance_name, database_name) as conn:
+            with self.connection_manager.get_connection(
+                project_id, region, instance_name, database_name
+            ) as conn:
                 cursor = conn.cursor()
-                
+
                 try:
-                    normalized_username = self.connection_manager.normalize_service_account_name(username)
-                    
+                    normalized_username = (
+                        self.connection_manager.normalize_service_account_name(username)
+                    )
+
                     # Check if postgres currently has this inheritance
                     cursor.execute(
                         """
@@ -492,50 +550,54 @@ class UserManager:
                         WHERE r1.rolname = 'postgres' 
                         AND r2.rolname = %s
                         """,
-                        (normalized_username,)
+                        (normalized_username,),
                     )
-                    
+
                     if not cursor.fetchone():
                         return {
                             "success": True,
                             "message": f"postgres does not have inheritance from user {normalized_username}",
                             "username": username,
                             "already_revoked": True,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     # Revoke the IAM user FROM postgres
                     revoke_command = f'REVOKE "{normalized_username}" FROM postgres'
-                    if not self.connection_manager.execute_sql_safely(cursor, revoke_command):
+                    if not self.connection_manager.execute_sql_safely(
+                        cursor, revoke_command
+                    ):
                         return {
                             "success": False,
                             "message": f"Failed to revoke user {normalized_username} from postgres",
                             "username": username,
-                            "execution_time_seconds": time.time() - start_time
+                            "execution_time_seconds": time.time() - start_time,
                         }
-                    
+
                     conn.commit()
-                    logger.info(f"Successfully revoked {normalized_username} FROM postgres")
-                    
+                    logger.info(
+                        f"Successfully revoked {normalized_username} FROM postgres"
+                    )
+
                     return {
                         "success": True,
                         "message": f"User {normalized_username} revoked from postgres successfully",
                         "username": username,
                         "normalized_username": normalized_username,
-                        "execution_time_seconds": time.time() - start_time
+                        "execution_time_seconds": time.time() - start_time,
                     }
-                    
+
                 except Exception as e:
                     conn.rollback()
                     raise e
                 finally:
                     cursor.close()
-                    
+
         except Exception as e:
             logger.error(f"Failed to revoke user {username} from postgres: {e}")
             return {
                 "success": False,
                 "message": f"Failed to revoke user from postgres: {str(e)}",
                 "username": username,
-                "execution_time_seconds": time.time() - start_time
+                "execution_time_seconds": time.time() - start_time,
             }

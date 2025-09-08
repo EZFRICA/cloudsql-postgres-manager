@@ -12,22 +12,21 @@ from app.routers import health, roles, schemas, database
 
 def create_application() -> FastAPI:
     """Create and configure the FastAPI application with all components."""
-    
+
     # Create the base app
     app = create_app()
-    
+
     # Register error handlers
     register_error_handlers(app)
-    
+
     # Include routers
     app.include_router(health.router)
     app.include_router(roles.router)
     app.include_router(schemas.router)
     app.include_router(database.router)
-    
+
     return app
 
 
 # Create the application instance
 app = create_application()
-

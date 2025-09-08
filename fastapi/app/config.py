@@ -14,26 +14,31 @@ class Settings(BaseSettings):
     """Application settings with environment variable support."""
 
     # Application settings
-    app_name: str = Field(default="Cloud SQL IAM User Permission Manager", env="APP_NAME")
+    app_name: str = Field(
+        default="Cloud SQL IAM User Permission Manager", env="APP_NAME"
+    )
     app_version: str = Field(default="0.1.0", env="APP_VERSION")
     debug: bool = Field(default=False, env="DEBUG")
 
     # Logging settings
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
     log_format: str = Field(
-        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        env="LOG_FORMAT"
+        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s", env="LOG_FORMAT"
     )
 
     # Database settings
     db_admin_user: str = Field(default="postgres", env="DB_ADMIN_USER")
-    secret_name_suffix: str = Field(default="postgres-password", env="SECRET_NAME_SUFFIX")
+    secret_name_suffix: str = Field(
+        default="postgres-password", env="SECRET_NAME_SUFFIX"
+    )
     connection_timeout: int = Field(default=30, env="CONNECTION_TIMEOUT")
     max_retries: int = Field(default=3, env="MAX_RETRIES")
 
     # Performance settings - Connection Pool
     connection_pool_size: int = Field(default=10, env="CONNECTION_POOL_SIZE")
-    connection_pool_max_overflow: int = Field(default=20, env="CONNECTION_POOL_MAX_OVERFLOW")
+    connection_pool_max_overflow: int = Field(
+        default=20, env="CONNECTION_POOL_MAX_OVERFLOW"
+    )
     connection_pool_timeout: int = Field(default=30, env="CONNECTION_POOL_TIMEOUT")
 
     # Security settings
@@ -42,76 +47,77 @@ class Settings(BaseSettings):
     # Firebase/Firestore settings
     firestore_db_name: str = Field(default="(default)", env="FIRESTORE_DB_NAME")
 
-    @field_validator('log_level')
+    @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
         """Validate log level is a valid logging level."""
-        valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         v_upper = v.upper()
         if v_upper not in valid_levels:
-            raise ValueError(f'log_level must be one of {valid_levels}')
+            raise ValueError(f"log_level must be one of {valid_levels}")
         return v_upper
 
-    @field_validator('db_admin_user')
+    @field_validator("db_admin_user")
     @classmethod
     def validate_db_admin_user(cls, v: str) -> str:
         """Validate database admin user name."""
         if not v or not v.strip():
-            raise ValueError('db_admin_user cannot be empty')
+            raise ValueError("db_admin_user cannot be empty")
         return v.strip()
 
-    @field_validator('connection_pool_size')
+    @field_validator("connection_pool_size")
     @classmethod
     def validate_connection_pool_size(cls, v: int) -> int:
         """Validate connection pool size."""
         if v < 1:
-            raise ValueError('connection_pool_size must be at least 1')
+            raise ValueError("connection_pool_size must be at least 1")
         if v > 100:
-            raise ValueError('connection_pool_size cannot exceed 100')
+            raise ValueError("connection_pool_size cannot exceed 100")
         return v
 
-    @field_validator('connection_pool_max_overflow')
+    @field_validator("connection_pool_max_overflow")
     @classmethod
     def validate_connection_pool_max_overflow(cls, v: int) -> int:
         """Validate connection pool max overflow."""
         if v < 0:
-            raise ValueError('connection_pool_max_overflow must be at least 0')
+            raise ValueError("connection_pool_max_overflow must be at least 0")
         if v > 200:
-            raise ValueError('connection_pool_max_overflow cannot exceed 200')
+            raise ValueError("connection_pool_max_overflow cannot exceed 200")
         return v
 
-    @field_validator('connection_timeout', 'connection_pool_timeout')
+    @field_validator("connection_timeout", "connection_pool_timeout")
     @classmethod
     def validate_timeout_values(cls, v: int) -> int:
         """Validate timeout values."""
         if v < 1:
-            raise ValueError('timeout values must be at least 1 second')
+            raise ValueError("timeout values must be at least 1 second")
         if v > 300:
-            raise ValueError('timeout values cannot exceed 300 seconds')
+            raise ValueError("timeout values cannot exceed 300 seconds")
         return v
 
-    @field_validator('max_retries')
+    @field_validator("max_retries")
     @classmethod
     def validate_max_retries(cls, v: int) -> int:
         """Validate max retries."""
         if v < 0:
-            raise ValueError('max_retries must be at least 0')
+            raise ValueError("max_retries must be at least 0")
         if v > 10:
-            raise ValueError('max_retries cannot exceed 10')
+            raise ValueError("max_retries cannot exceed 10")
         return v
 
-    @field_validator('max_users_per_request')
+    @field_validator("max_users_per_request")
     @classmethod
     def validate_max_users_per_request(cls, v: int) -> int:
         """Validate max users per request."""
         if v < 1:
-            raise ValueError('max_users_per_request must be at least 1')
+            raise ValueError("max_users_per_request must be at least 1")
         if v > 1000:
-            raise ValueError('max_users_per_request cannot exceed 1000')
+            raise ValueError("max_users_per_request cannot exceed 1000")
         return v
 
     class Config:
         """Pydantic configuration."""
+
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
