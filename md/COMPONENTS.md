@@ -1,23 +1,30 @@
 # Components Documentation
 
+## ⚠️ Important Notice
+
+**The components in the `components/` directory are available for users but are NOT integrated in the functional codebase.**
+
+These components were developed as reusable utilities that users can utilize, but they are not currently integrated into the main application's functional code. They are kept as available features for user implementation.
+
 ## 🧩 Component System Architecture
 
-The component system provides reusable business logic components that can be shared across different services and routers.
+The component system provides reusable business logic components that can be shared across different services and routers. **Note: These components are available for users but not integrated in the functional codebase.**
 
 ## 📋 Component Overview
 
-| Component | Purpose | Usage |
-|-----------|---------|-------|
-| `ValidationHelper` | Input validation and sanitization | All services |
-| `ErrorHandler` | Centralized error handling | All routers |
-| `ServiceOperations` | Common service operation patterns | Service layer |
-| `DatabaseOperations` | Database-specific operations | Database services |
-| `LoggingHelper` | Structured logging utilities | All components |
-| `BaseResponse` | Standardized response formats | All endpoints |
+| Component | Purpose | Usage Status |
+|-----------|---------|--------------|
+| `ValidationHelper` | Input validation and sanitization | ⚠️ Available but not integrated |
+| `ErrorHandler` | Centralized error handling | ⚠️ Available but not integrated |
+| `ServiceOperations` | Common service operation patterns | ⚠️ Available but not integrated |
+| `DatabaseOperations` | Database-specific operations | ⚠️ Available but not integrated |
+| `LoggingHelper` | Structured logging utilities | ⚠️ Available but not integrated |
+| `BaseResponse` | Standardized response formats | ⚠️ Available but not integrated |
 
 ## ✅ ValidationHelper
 
-**Purpose**: Centralized input validation and data sanitization.
+**Purpose**: Centralized input validation and data sanitization.  
+**Status**: ⚠️ **Available for users but not integrated in functional code**
 
 ### Key Features
 - Request validation
@@ -50,7 +57,8 @@ if not validation_result["valid"]:
 
 ## 🚨 ErrorHandler
 
-**Purpose**: Centralized error handling and response formatting.
+**Purpose**: Centralized error handling and response formatting.  
+**Status**: ⚠️ **Available for users but not integrated in functional code**
 
 ### Key Features
 - Consistent error responses
@@ -88,7 +96,8 @@ except DatabaseError as e:
 
 ## ⚙️ ServiceOperations
 
-**Purpose**: Common service operation patterns and utilities.
+**Purpose**: Common service operation patterns and utilities.  
+**Status**: ⚠️ **Available for users but not integrated in functional code**
 
 ### Key Features
 - Operation execution patterns
@@ -124,7 +133,8 @@ response = ServiceOperations.format_service_response(
 
 ## 🗄️ DatabaseOperations
 
-**Purpose**: Database-specific operations and utilities.
+**Purpose**: Database-specific operations and utilities.  
+**Status**: ⚠️ **Available for users but not integrated in functional code**
 
 ### Key Features
 - SQL query execution
@@ -160,7 +170,8 @@ DatabaseOperations.execute_transaction(connection, [
 
 ## 📝 LoggingHelper
 
-**Purpose**: Structured logging utilities and formatting.
+**Purpose**: Structured logging utilities and formatting.  
+**Status**: ⚠️ **Available for users but not integrated in functional code**
 
 ### Key Features
 - Structured JSON logging
@@ -197,7 +208,8 @@ LoggingHelper.log_performance_metric(
 
 ## 📤 BaseResponse
 
-**Purpose**: Standardized response formats for all endpoints.
+**Purpose**: Standardized response formats for all endpoints.  
+**Status**: ⚠️ **Available for users but not integrated in functional code**
 
 ### Response Types
 - **SuccessResponse**: Successful operations
@@ -234,19 +246,21 @@ return ErrorResponse(
 
 ## 🔄 Component Integration
 
-### 1. Request Processing Flow
+**Note**: This section describes the theoretical integration of components, but they are not used in the current application.
+
+### 1. Request Processing Flow (Theoretical)
 ```
 Router → ValidationHelper → Service → DatabaseOperations
   ↓
 ErrorHandler ← LoggingHelper
 ```
 
-### 2. Error Handling Flow
+### 2. Error Handling Flow (Theoretical)
 ```
 Exception → ErrorHandler → LoggingHelper → BaseResponse
 ```
 
-### 3. Service Operation Flow
+### 3. Service Operation Flow (Theoretical)
 ```
 ServiceOperations → DatabaseOperations → LoggingHelper
 ```
@@ -336,22 +350,24 @@ logging_helper = LoggingHelper()
 
 ## 🚀 Best Practices
 
-### 1. **Component Usage**
+**Note**: These best practices are theoretical since the components are not used in the current application.
+
+### 1. **Component Usage (Theoretical)**
 - Use components consistently across services
 - Follow the established patterns
 - Handle errors appropriately
 
-### 2. **Error Handling**
+### 2. **Error Handling (Theoretical)**
 - Always use ErrorHandler for error responses
 - Log errors with appropriate context
 - Sanitize error messages for security
 
-### 3. **Validation**
+### 3. **Validation (Theoretical)**
 - Validate all inputs using ValidationHelper
 - Use appropriate validation schemas
 - Provide clear validation error messages
 
-### 4. **Logging**
+### 4. **Logging (Theoretical)**
 - Use LoggingHelper for structured logging
 - Include correlation IDs for request tracking
 - Log performance metrics consistently

@@ -14,6 +14,8 @@ The service layer contains the core business logic organized into specialized se
 | `UserManager` | IAM user validation and operations | `ConnectionManager` |
 | `RolePermissionManager` | Role assignments and permissions | `ConnectionManager`, `SchemaManager`, `UserManager` |
 | `HealthManager` | Database health monitoring | `ConnectionManager` |
+| `DatabaseValidator` | Centralized database validation utilities | None |
+| `FirestoreRoleRegistryManager` | Firestore role registry management | None |
 
 ## 🔌 ConnectionManager
 
@@ -257,6 +259,81 @@ FIRESTORE_COLLECTION=role_registries
 HEALTH_CHECK_TIMEOUT=30
 ```
 
+## 🔍 DatabaseValidator
+
+**Purpose**: Centralized database validation utilities to avoid duplication across managers.
+
+### Key Features
+- Role existence validation
+- Schema existence validation
+- Database existence validation
+- IAM user validation
+- User role retrieval
+- Service account name normalization
+
+### Methods
+```python
+def role_exists(cursor, role_name)
+def schema_exists(cursor, schema_name)
+def database_exists(cursor, database_name)
+def is_iam_user(cursor, username)
+def get_user_roles(cursor, username, schema_prefix=None)
+def normalize_service_account_name(username)
+def validate_schema_name(schema_name)
+def validate_database_name(database_name)
+```
+
+### Usage Example
+```python
+from app.services.database_validator import DatabaseValidator
+
+# Check if role exists
+if DatabaseValidator.role_exists(cursor, "my_role"):
+    # Role exists, proceed with operation
+    pass
+
+# Validate IAM user
+if DatabaseValidator.is_iam_user(cursor, "user@project.iam"):
+    # Valid IAM user, proceed with operation
+    pass
+```
+
+## 🔥 FirestoreRoleRegistryManager
+
+**Purpose**: Firestore-based role registry management for tracking role initialization state.
+
+### Key Features
+- Role registry document management
+- Role initialization state tracking
+- Role definition storage and retrieval
+- Creation history tracking
+- Version control and checksums
+
+### Methods
+```python
+def get_registry_document(project_id, instance_name, database_name)
+def create_registry_document(project_id, instance_name, database_name, roles_definitions)
+def update_registry_document(project_id, instance_name, database_name, updates)
+def delete_registry_document(project_id, instance_name, database_name)
+```
+
+### Usage Example
+```python
+from app.services.firebase import FirestoreRoleRegistryManager
+
+firestore_manager = FirestoreRoleRegistryManager()
+
+# Get role registry
+registry = firestore_manager.get_registry_document(
+    "my-project", "my-instance", "my-database"
+)
+
+# Create new registry
+firestore_manager.create_registry_document(
+    "my-project", "my-instance", "my-database", roles_definitions
+)
+```
+
 ### Service Dependencies
 Services are initialized with their dependencies:
 
@@ -267,4 +344,6 @@ schema_manager = SchemaManager(connection_manager)
 role_manager = RoleManager()
 user_manager = UserManager(connection_manager)
 health_manager = HealthManager(connection_manager)
+database_validator = DatabaseValidator()
+firestore_manager = FirestoreRoleRegistryManager()
 ```

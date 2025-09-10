@@ -45,8 +45,6 @@ from .services.firebase import FirestoreRoleRegistryManager
 
 # Models
 from .models import (
-    IAMUser,
-    IAMUserRequest,
     RoleInitializeRequest,
     RoleInitializeResponse,
     HealthResponse,
@@ -81,8 +79,6 @@ __all__ = [
     "RoleManager",
     "FirestoreRoleRegistryManager",
     # Models
-    "IAMUser",
-    "IAMUserRequest",
     "RoleInitializeRequest",
     "RoleInitializeResponse",
     "HealthResponse",

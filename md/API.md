@@ -12,8 +12,8 @@ The Cloud SQL PostgreSQL Manager provides a comprehensive REST API for managing 
 | `/database/schemas` | POST | List database schemas | SchemaManager |
 | `/database/tables` | POST | List schema tables | SchemaManager |
 | `/database/health` | POST | Database health check | HealthManager |
-| `/database/grant-user` | POST | Grant user to postgres | UserManager |
-| `/database/revoke-user` | POST | Revoke user from postgres | UserManager |
+| `/database/postgres-inheritance/grant` | POST | Grant user to postgres | UserManager |
+| `/database/postgres-inheritance/revoke` | POST | Revoke user from postgres | UserManager |
 | `/schemas/create` | POST | Create database schema | SchemaManager |
 | `/roles/initialize` | POST | Initialize roles | RoleManager |
 | `/roles/assign` | POST | Assign role to user | RolePermissionManager |
@@ -136,8 +136,14 @@ Check database health and performance.
 }
 ```
 
-### POST /database/grant-user
-Grant IAM user to postgres role.
+### POST /database/postgres-inheritance/grant
+Grant an IAM user to postgres to allow postgres to manage this user.
+
+**Features:**
+- Validates that the user is a manageable IAM user
+- Checks for existing inheritance to avoid duplicates
+- Provides detailed execution timing
+- Comprehensive error handling and rollback
 
 **Request:**
 ```json
@@ -163,8 +169,14 @@ Grant IAM user to postgres role.
 }
 ```
 
-### POST /database/revoke-user
-Revoke IAM user from postgres role.
+### POST /database/postgres-inheritance/revoke
+Revoke an IAM user from postgres inheritance.
+
+**Features:**
+- Removes postgres inheritance from IAM user
+- Validates that the user exists and has inheritance
+- Provides detailed execution timing
+- Comprehensive error handling
 
 **Request:**
 ```json
