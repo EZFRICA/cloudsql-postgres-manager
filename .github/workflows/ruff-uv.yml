@@ -1,11 +1,13 @@
-name: Ruff with uv (Virtual Environment)
+name: Code Quality & Tests
 
 on:
   push:
     branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
 
 jobs:
-  ruff:
+  quality-and-tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -36,6 +38,8 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install ruff
+        uv pip install -r postgres-manager/requirements.txt
+        uv pip install -r tests/requirements-test.txt
     
     - name: Run Ruff check
       run: |
@@ -48,3 +52,7 @@ jobs:
     
     - name: Show Ruff version
       run: uv run ruff --version
+    
+    - name: Run tests
+      run: |
+        uv run pytest tests/ -v --tb=short

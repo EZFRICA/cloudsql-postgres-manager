@@ -14,8 +14,8 @@ This guide covers deploying the Cloud SQL PostgreSQL Manager on Google Cloud Run
 ### Google Cloud Requirements
 - **Cloud SQL**: PostgreSQL 13+ instances
 - **Secret Manager**: For database credentials
-- **IAM**: Service account with required permissions
-- **Firestore**: For role registry (optional)
+- **IAM**: Service account with required permissions Cloud Datastore User, Cloud SQL Client, Secret Manager Secret Accessor
+- **Firestore**: For role registry
 
 ## 🔧 Configuration
 
@@ -127,7 +127,7 @@ gcloud config set project YOUR_PROJECT_ID
 gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/cloudsql-postgres-manager
 
 # Or use Artifact Registry
-gcloud builds submit --tag europe-west1-docker.pkg.dev/YOUR_PROJECT_ID/cloudsql-manager/cloudsql-postgres-manager
+gcloud builds submit --tag europe-west1-docker.pkg.dev/YOUR_PROJECT_ID/postgres-manager/cloudsql-postgres-manager
 ```
 
 ### Deploy to Cloud Run
@@ -184,24 +184,24 @@ spec:
 ### Service Account
 ```bash
 # Create service account
-gcloud iam service-accounts create cloudsql-manager-sa \
+gcloud iam service-accounts create postgres-manager-sa \
   --display-name="Cloud SQL Manager Service Account"
 
 # Grant required permissions
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:cloudsql-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:postgres-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/cloudsql.client"
 
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:cloudsql-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:postgres-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/secretmanager.secretAccessor"
 
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:cloudsql-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:postgres-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/iam.serviceAccountTokenCreator"
 
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
-  --member="serviceAccount:cloudsql-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:postgres-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
   --role="roles/datastore.user"
 ```
 
@@ -219,47 +219,6 @@ gcloud run services add-iam-policy-binding cloudsql-postgres-manager \
   --role="roles/run.invoker"
 ```
 
-## 📊 Monitoring and Observability
-
-### Cloud Monitoring
-```bash
-# Enable Cloud Monitoring for Cloud Run
-gcloud services enable monitoring.googleapis.com
-
-# View metrics in Cloud Console
-# Go to: Monitoring > Metrics Explorer
-# Filter by: cloud_run_revision
-```
-
-### Cloud Logging
-```bash
-# View Cloud Run logs
-gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=cloudsql-postgres-manager" --limit=50
-
-# Stream logs in real-time
-gcloud logging tail "resource.type=cloud_run_revision AND resource.labels.service_name=cloudsql-postgres-manager"
-```
-
-### Alerting
-```bash
-# Create alert policy for error rate
-gcloud alpha monitoring policies create --policy-from-file=alert-policy.yaml
-```
-
-### Alert Policy Example
-```yaml
-# alert-policy.yaml
-displayName: "Cloud SQL Manager High Error Rate"
-conditions:
-  - displayName: "Error rate > 5%"
-    conditionThreshold:
-      filter: 'resource.type="cloud_run_revision" AND resource.labels.service_name="cloudsql-postgres-manager" AND severity>=ERROR'
-      comparison: COMPARISON_GREATER_THAN
-      thresholdValue: 0.05
-      duration: 300s
-notificationChannels:
-  - "projects/YOUR_PROJECT_ID/notificationChannels/YOUR_CHANNEL_ID"
-```
 
 ## 🧪 Testing Deployment
 
@@ -291,57 +250,7 @@ hey -n 1000 -c 10 -m POST \
   http://localhost:8080/database/schemas
 ```
 
-### Integration Testing
-```bash
-# Run integration tests
-pytest tests/integration/ -v
 
-# Run with coverage
-pytest --cov=app --cov-report=html tests/
-```
-
-## 🔄 CI/CD Pipeline
-
-### GitHub Actions
-```yaml
-name: Deploy to Cloud Run
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install pytest
-    
-    - name: Run tests
-      run: pytest tests/
-    
-    - name: Build and push
-      run: |
-        gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/cloudsql-postgres-manager
-    
-    - name: Deploy to Cloud Run
-      run: |
-        gcloud run deploy cloudsql-postgres-manager \
-          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/cloudsql-postgres-manager \
-          --platform managed \
-          --region europe-west1 \
-          --allow-unauthenticated
-```
 
 ## 🚨 Troubleshooting
 
@@ -362,7 +271,7 @@ export CONNECTION_POOL_SIZE=20
 gcloud projects get-iam-policy YOUR_PROJECT_ID \
   --flatten="bindings[].members" \
   --format="table(bindings.role)" \
-  --filter="bindings.members:cloudsql-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com"
+  --filter="bindings.members:postgres-manager-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com"
 ```
 
 #### Database Connection Issues
@@ -371,17 +280,6 @@ gcloud projects get-iam-policy YOUR_PROJECT_ID \
 gcloud sql connect YOUR_INSTANCE --user=postgres --database=YOUR_DATABASE
 ```
 
-### Log Analysis
-```bash
-# View Cloud Run logs
-gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=cloudsql-postgres-manager" --limit=100
-
-# Filter error logs
-gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=cloudsql-postgres-manager AND severity>=ERROR" --limit=50
-
-# Stream logs in real-time
-gcloud logging tail "resource.type=cloud_run_revision AND resource.labels.service_name=cloudsql-postgres-manager"
-```
 
 ## 📈 Performance Tuning
 
@@ -405,14 +303,6 @@ gcloud run services update cloudsql-postgres-manager \
 
 ## 🔄 Backup and Recovery
 
-### Database Backups
-```bash
-# Create database backup
-gcloud sql backups create --instance=YOUR_INSTANCE
-
-# Restore from backup
-gcloud sql backups restore BACKUP_ID --instance=YOUR_INSTANCE
-```
 
 ### Application State Backup
 ```bash
@@ -422,3 +312,34 @@ gcloud firestore export gs://YOUR_BUCKET/backup-$(date +%Y%m%d)
 # Restore Firestore data
 gcloud firestore import gs://YOUR_BUCKET/backup-20240101
 ```
+
+## 🐛 Known Issues and Fixes
+
+### Connection Pool Database Isolation Bug (Fixed in v0.1.1)
+
+**Issue**: The connection pool was incorrectly sharing connections between different databases on the same Cloud SQL instance, causing schema existence checks to return incorrect results.
+
+**Symptoms**:
+- API returns "Schema already exists" when trying to create a schema in a database where it doesn't exist
+- Schemas appear to exist in one database but not in another on the same instance
+- Inconsistent behavior when working with multiple databases
+
+**Root Cause**: The connection pool key only included `project_id:region:instance_name` but not `database_name`, causing connections to different databases to be pooled together.
+
+**Fix Applied**:
+```python
+# Before (incorrect)
+def _get_pool_key(self, project_id: str, region: str, instance_name: str) -> str:
+    return f"{project_id}:{region}:{instance_name}"
+
+# After (correct)  
+def _get_pool_key(self, project_id: str, region: str, instance_name: str, database_name: str) -> str:
+    return f"{project_id}:{region}:{instance_name}:{database_name}"
+```
+
+**Verification**: 
+- Each database now gets its own connection pool
+- Schema operations are properly isolated between databases
+- Tests added to prevent regression
+
+**Impact**: This fix ensures proper database isolation and correct schema management across multiple databases on the same Cloud SQL instance.

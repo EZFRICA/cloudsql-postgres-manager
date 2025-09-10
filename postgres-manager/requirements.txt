@@ -1,0 +1,15 @@
+# Core FastAPI dependencies
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic==2.11.7
+pydantic-settings>=2.0.0
+
+# Database dependencies
+cloud-sql-python-connector>=1.18.3
+pg8000>=1.31.4
+
+# Google Cloud dependencies
+google-api-core>=2.25.1
+google-cloud-secret-manager>=2.24.0
+google-cloud-firestore>=2.0.0
+protobuf==6.31.1

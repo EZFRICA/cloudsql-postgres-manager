@@ -2,6 +2,19 @@
 
 A comprehensive solution for automating Google Cloud SQL PostgreSQL database management and IAM user permissions across multiple databases in an organization.
 
+## 🎬 Application Demo
+
+This application provides a complete REST API for managing PostgreSQL databases, schemas, roles, and IAM users. Below you'll find screenshots demonstrating the key features:
+
+### Quick Overview
+- **Health Monitoring**: Real-time service and database health checks
+- **Schema Management**: Create and manage database schemas with proper ownership
+- **Role Management**: Initialize, assign, and revoke PostgreSQL roles
+- **IAM Integration**: Seamless Google Cloud IAM user management
+- **Database Operations**: List schemas, tables, and perform health checks
+
+*Scroll down to see detailed screenshots for each feature!*
+
 ## 📚 Documentation Overview
 
 This project contains comprehensive documentation for the Cloud SQL PostgreSQL Manager, a modular FastAPI service for managing PostgreSQL databases, schemas, roles, and IAM user permissions in Google Cloud SQL.
@@ -95,15 +108,28 @@ The system includes an extensible plugin architecture for role management:
 - **PluginRegistry**: Plugin management and loading
 - **Version Control**: Role versioning and updates
 
-## 🌐 API Endpoints
+## 🌐 API Endpoints & Screenshots
+
+### Health Monitoring
+- `GET /health` - Service health check
+
+![Health Check](./md/images/health.png)
 
 ### Database Management
 - `POST /database/schemas` - List database schemas
-- `POST /database/tables` - List schema tables
+- `POST /database/tables` - List schema tables  
 - `POST /database/health` - Database health check
+
+![List all schemas in the database](./md/images/List%20all%20schemas%20in%20the%20database.png)
+
+![List all tables in a specific schema](./md/images/List%20all%20tables%20in%20a%20specific%20schema.png)
+
+![Check database health and connection status](./md/images/Check%20database%20health%20and%20connection%20status.png)
 
 ### Schema Management
 - `POST /schemas/create` - Create database schema
+
+![Create schemas](./md/images/create%20schemas.png)
 
 ### Role Management
 - `POST /roles/initialize` - Initialize roles
@@ -111,17 +137,43 @@ The system includes an extensible plugin architecture for role management:
 - `POST /roles/revoke` - Revoke role from user
 - `POST /roles/list` - List available roles
 
+![Initialize PostgreSQL roles](./md/images/Initialize%20PostgreSQL%20roles.png)
+
+![Assign a role to a user](./md/images/Assign%20a%20role%20to%20a%20user.png)
+
+![Revoke a role from a user](./md/images/Revoke%20a%20role%20from%20a%20user.png)
+
+![Get all users and their assigned roles](./md/images/Get%20all%20users%20and%20their%20assigned%20roles.png)
+
+### IAM User Management
+- `POST /database/postgres-inheritance/grant` - Grant IAM user to postgres
+- `POST /database/postgres-inheritance/revoke` - Revoke IAM user from postgres
+
+![Grant an IAM user to postgres](./md/images/Grant%20an%20IAM%20user%20to%20postgres.png)
+
+![Revoke an IAM user from postgres](./md/images/Revoke%20an%20IAM%20user%20from%20postgres.png)
+
+## 📊 PostgreSQL Results
+
+### Database Schema Overview
+![Table in schema](./md/images/table%20in%20schema.png)
+
+### PostgreSQL Command Line Results
+![psql du - List users](./md/images/psql%20du.png)
+
+![psql dn - List databases](./md/images/psql%20dn.png)
+
 ## 🚀 Deployment Options
 
 ### Local Development
 ```bash
-cd fastapi
+cd postgres-manager
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 ```
 
 ### Docker
 ```bash
-cd fastapi
+cd postgres-manager
 docker build -t cloudsql-postgres-manager .
 docker run -p 8080:8080 cloudsql-postgres-manager
 ```
@@ -134,27 +186,11 @@ gcloud run deploy cloudsql-postgres-manager \
   --region europe-west1
 ```
 
-### Kubernetes
-```bash
-kubectl apply -f k8s/
-```
 
 ## 🧪 Testing
 
-### Unit Tests
-```bash
-pytest tests/unit/
-```
-
-### Integration Tests
-```bash
-pytest tests/integration/
-```
-
-### API Testing
-```bash
-python test_validation.py
-```
+For comprehensive testing documentation, see:
+- **[tests/README.md](./tests/README.md)** - Complete test suite documentation
 
 ### Role Testing
 For comprehensive role testing, see the testing documentation:
@@ -210,7 +246,7 @@ Structured JSON logging with correlation IDs and performance metrics.
 
 ```
 cloudsql-postgres-manager/
-├── fastapi/                    # FastAPI application
+├── postgres-manager/           # FastAPI application
 │   ├── app/
 │   │   ├── main.py            # Main application code
 │   │   ├── models.py          # Pydantic models
