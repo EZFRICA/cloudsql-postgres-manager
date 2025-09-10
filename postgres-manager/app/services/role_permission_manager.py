@@ -401,7 +401,6 @@ class RolePermissionManager:
         region: str,
         instance_name: str,
         database_name: str,
-        schema_name: str,
         username: str,
         role_name: str,
     ) -> dict:
@@ -413,7 +412,6 @@ class RolePermissionManager:
             region: Instance region
             instance_name: Cloud SQL instance name
             database_name: Database name
-            schema_name: Schema name
             username: Username to assign role to
             role_name: Role name to assign
 
@@ -445,7 +443,6 @@ class RolePermissionManager:
                             "project_id": project_id,
                             "instance_name": instance_name,
                             "database_name": database_name,
-                            "schema_name": schema_name,
                             "validation_reason": validation["reason"],
                             "user_type": validation.get("user_type", "unknown"),
                             "execution_time_seconds": time.time() - start_time,
@@ -461,7 +458,6 @@ class RolePermissionManager:
                             "project_id": project_id,
                             "instance_name": instance_name,
                             "database_name": database_name,
-                            "schema_name": schema_name,
                             "execution_time_seconds": time.time() - start_time,
                         }
 
@@ -480,7 +476,6 @@ class RolePermissionManager:
                             "project_id": project_id,
                             "instance_name": instance_name,
                             "database_name": database_name,
-                            "schema_name": schema_name,
                             "already_assigned": True,
                             "execution_time_seconds": time.time() - start_time,
                         }
@@ -498,7 +493,6 @@ class RolePermissionManager:
                             "project_id": project_id,
                             "instance_name": instance_name,
                             "database_name": database_name,
-                            "schema_name": schema_name,
                             "execution_time_seconds": time.time() - start_time,
                         }
 
@@ -515,7 +509,6 @@ class RolePermissionManager:
                         "project_id": project_id,
                         "instance_name": instance_name,
                         "database_name": database_name,
-                        "schema_name": schema_name,
                         "execution_time_seconds": time.time() - start_time,
                     }
 
@@ -535,7 +528,6 @@ class RolePermissionManager:
                 "project_id": project_id,
                 "instance_name": instance_name,
                 "database_name": database_name,
-                "schema_name": schema_name,
                 "execution_time_seconds": time.time() - start_time,
             }
 
@@ -545,7 +537,6 @@ class RolePermissionManager:
         region: str,
         instance_name: str,
         database_name: str,
-        schema_name: str,
         username: str,
         role_name: str,
     ) -> dict:
@@ -557,7 +548,6 @@ class RolePermissionManager:
             region: Instance region
             instance_name: Cloud SQL instance name
             database_name: Database name
-            schema_name: Schema name
             username: Username to revoke role from
             role_name: Role name to revoke
 
@@ -588,7 +578,6 @@ class RolePermissionManager:
                             "project_id": project_id,
                             "instance_name": instance_name,
                             "database_name": database_name,
-                            "schema_name": schema_name,
                             "execution_time_seconds": time.time() - start_time,
                         }
 
@@ -602,7 +591,6 @@ class RolePermissionManager:
                             "project_id": project_id,
                             "instance_name": instance_name,
                             "database_name": database_name,
-                            "schema_name": schema_name,
                             "execution_time_seconds": time.time() - start_time,
                         }
 
@@ -621,7 +609,6 @@ class RolePermissionManager:
                             "project_id": project_id,
                             "instance_name": instance_name,
                             "database_name": database_name,
-                            "schema_name": schema_name,
                             "execution_time_seconds": time.time() - start_time,
                         }
 
@@ -638,7 +625,6 @@ class RolePermissionManager:
                         "project_id": project_id,
                         "instance_name": instance_name,
                         "database_name": database_name,
-                        "schema_name": schema_name,
                         "execution_time_seconds": time.time() - start_time,
                     }
 
@@ -658,6 +644,5 @@ class RolePermissionManager:
                 "project_id": project_id,
                 "instance_name": instance_name,
                 "database_name": database_name,
-                "schema_name": schema_name,
                 "execution_time_seconds": time.time() - start_time,
             }

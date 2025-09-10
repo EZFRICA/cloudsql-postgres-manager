@@ -199,7 +199,6 @@ class RoleAssignRequest(BaseModel):
         instance_name: Cloud SQL instance name
         database_name: Database name
         region: GCP region
-        schema_name: Schema name
         username: IAM username to assign role to
         role_name: Role name to assign
     """
@@ -208,7 +207,6 @@ class RoleAssignRequest(BaseModel):
     instance_name: str = Field(..., description="Cloud SQL instance name")
     database_name: str = Field(..., description="Database name")
     region: str = Field(..., description="GCP region")
-    schema_name: str = Field(..., description="Schema name")
     username: str = Field(..., description="IAM username to assign role to")
     role_name: str = Field(..., description="Role name to assign")
 
@@ -217,7 +215,6 @@ class RoleAssignRequest(BaseModel):
         "instance_name",
         "database_name",
         "region",
-        "schema_name",
         "username",
         "role_name",
     )
@@ -234,7 +231,6 @@ class RoleAssignRequest(BaseModel):
                 "instance_name": "my-instance",
                 "database_name": "my-database",
                 "region": "europe-west1",
-                "schema_name": "app_schema",
                 "username": "user@example.com",
                 "role_name": "mydb_app_writer",
             }
@@ -251,7 +247,6 @@ class RoleRevokeRequest(BaseModel):
         instance_name: Cloud SQL instance name
         database_name: Database name
         region: GCP region
-        schema_name: Schema name
         username: IAM username to revoke role from
         role_name: Role name to revoke
     """
@@ -260,7 +255,6 @@ class RoleRevokeRequest(BaseModel):
     instance_name: str = Field(..., description="Cloud SQL instance name")
     database_name: str = Field(..., description="Database name")
     region: str = Field(..., description="GCP region")
-    schema_name: str = Field(..., description="Schema name")
     username: str = Field(..., description="IAM username to revoke role from")
     role_name: str = Field(..., description="Role name to revoke")
 
@@ -269,7 +263,6 @@ class RoleRevokeRequest(BaseModel):
         "instance_name",
         "database_name",
         "region",
-        "schema_name",
         "username",
         "role_name",
     )
@@ -286,7 +279,6 @@ class RoleRevokeRequest(BaseModel):
                 "instance_name": "my-instance",
                 "database_name": "my-database",
                 "region": "europe-west1",
-                "schema_name": "app_schema",
                 "username": "user@example.com",
                 "role_name": "mydb_app_writer",
             }
@@ -303,14 +295,51 @@ class RoleListRequest(BaseModel):
         instance_name: Cloud SQL instance name
         database_name: Database name
         region: GCP region
-        schema_name: Schema name
     """
 
     project_id: str = Field(..., description="GCP project ID")
     instance_name: str = Field(..., description="Cloud SQL instance name")
     database_name: str = Field(..., description="Database name")
     region: str = Field(..., description="GCP region")
-    schema_name: str = Field(..., description="Schema name")
+
+    @field_validator(
+        "project_id", "instance_name", "database_name", "region"
+    )
+    @classmethod
+    def validate_non_empty_strings(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Field cannot be empty or contain only whitespace")
+        return v.strip()
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "project_id": "my-project",
+                "instance_name": "my-instance",
+                "database_name": "my-database",
+                "region": "europe-west1",
+            }
+        }
+    )
+
+
+class UserRoleListRequest(BaseModel):
+    """
+    Model for user role list requests.
+
+    Attributes:
+        project_id: GCP project ID
+        instance_name: Cloud SQL instance name
+        database_name: Database name
+        region: GCP region
+        schema_name: Schema name to filter roles
+    """
+
+    project_id: str = Field(..., description="GCP project ID")
+    instance_name: str = Field(..., description="Cloud SQL instance name")
+    database_name: str = Field(..., description="Database name")
+    region: str = Field(..., description="GCP region")
+    schema_name: str = Field(..., description="Schema name to filter roles")
 
     @field_validator(
         "project_id", "instance_name", "database_name", "region", "schema_name"
@@ -361,7 +390,6 @@ class RoleOperationResponse(BaseModel):
         project_id: GCP project ID
         instance_name: Cloud SQL instance name
         database_name: Database name
-        schema_name: Schema name
         execution_time_seconds: Time taken to execute the operation
     """
 
@@ -372,7 +400,6 @@ class RoleOperationResponse(BaseModel):
     project_id: str = Field(..., description="GCP project ID")
     instance_name: str = Field(..., description="Cloud SQL instance name")
     database_name: str = Field(..., description="Database name")
-    schema_name: str = Field(..., description="Schema name")
     execution_time_seconds: float = Field(
         ..., description="Time taken to execute the operation"
     )

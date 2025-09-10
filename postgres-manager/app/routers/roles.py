@@ -9,6 +9,7 @@ from ..models import (
     RoleAssignRequest,
     RoleRevokeRequest,
     RoleListRequest,
+    UserRoleListRequest,
     RoleOperationResponse,
     UserRoleListResponse,
     RoleListResponse,
@@ -159,7 +160,6 @@ async def assign_role(request: RoleAssignRequest):
         "instance_name": "my-instance",
         "database_name": "my-database",
         "region": "europe-west1",
-        "schema_name": "app_schema",
         "username": "user@example.com",
         "role_name": "mydb_app_writer"
     }
@@ -175,7 +175,6 @@ async def assign_role(request: RoleAssignRequest):
             region=request.region,
             instance_name=request.instance_name,
             database_name=request.database_name,
-            schema_name=request.schema_name,
             username=request.username,
             role_name=request.role_name,
         )
@@ -215,7 +214,6 @@ async def revoke_role(request: RoleRevokeRequest):
         "instance_name": "my-instance",
         "database_name": "my-database",
         "region": "europe-west1",
-        "schema_name": "app_schema",
         "username": "user@example.com",
         "role_name": "mydb_app_writer"
     }
@@ -231,7 +229,6 @@ async def revoke_role(request: RoleRevokeRequest):
             region=request.region,
             instance_name=request.instance_name,
             database_name=request.database_name,
-            schema_name=request.schema_name,
             username=request.username,
             role_name=request.role_name,
         )
@@ -252,7 +249,7 @@ async def revoke_role(request: RoleRevokeRequest):
 
 
 @router.post("/users", response_model=UserRoleListResponse)
-async def get_users_and_roles(request: RoleListRequest):
+async def get_users_and_roles(request: UserRoleListRequest):
     """
     Get all users and their assigned roles for a schema.
 
