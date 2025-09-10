@@ -11,11 +11,8 @@ httpx>=0.24.0
 fastapi[all]>=0.104.0
 
 # Mocking and test utilities
-unittest-mock>=1.0.0
+# unittest.mock is part of Python standard library (3.3+)
 responses>=0.23.0
-
-# Database testing (optional)
-pytest-postgresql>=5.0.0
 
 # Code quality
 black>=23.0.0
