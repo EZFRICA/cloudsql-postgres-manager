@@ -302,9 +302,7 @@ class RoleListRequest(BaseModel):
     database_name: str = Field(..., description="Database name")
     region: str = Field(..., description="GCP region")
 
-    @field_validator(
-        "project_id", "instance_name", "database_name", "region"
-    )
+    @field_validator("project_id", "instance_name", "database_name", "region")
     @classmethod
     def validate_non_empty_strings(cls, v):
         if not v or not v.strip():
