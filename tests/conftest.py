@@ -276,8 +276,9 @@ def test_roles():
         "test_database_test_schema_reader",
         "test_database_test_schema_writer",
         "test_database_test_schema_admin",
-        "test_database_test_schema_monitor",
         "test_database_test_schema_analyst",
+        "test_database_monitor",  # Database-wide role
+        "test_database_dba_agent",  # Database-wide role
     ]
 
 

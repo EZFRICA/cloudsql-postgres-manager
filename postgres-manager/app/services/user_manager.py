@@ -601,3 +601,136 @@ class UserManager:
                 "username": username,
                 "execution_time_seconds": time.time() - start_time,
             }
+
+    def cleanup_user_before_deletion(
+        self,
+        cursor,
+        username: str,
+        database_name: str,
+        schema_name: str = None,
+    ) -> bool:
+        """
+        Clean up user ownership before permanent deletion.
+
+        This method should be called BEFORE deleting an IAM user to:
+        1. Transfer ownership of all objects to postgres
+        2. Revoke all permissions
+        3. Ensure no orphaned objects remain
+
+        Args:
+            cursor: Database cursor
+            username: Username being deleted
+            database_name: Database name
+            schema_name: Optional specific schema (if None, affects all schemas)
+
+        Returns:
+            True if cleanup successful, False otherwise
+        """
+        try:
+            normalized_username = DatabaseValidator.normalize_service_account_name(
+                username
+            )
+
+            logger.info(
+                f"Starting cleanup for user {normalized_username} before deletion"
+            )
+
+            # 1. Transfer ownership of all objects to postgres
+            reassign_cmd = f'REASSIGN OWNED BY "{normalized_username}" TO postgres'
+
+            if not self.connection_manager.execute_sql_safely(cursor, reassign_cmd):
+                logger.error(
+                    f"Failed to reassign owned objects for {normalized_username}"
+                )
+                return False
+
+            # 2. Revoke all permissions (existing method)
+            if schema_name:
+                success = self._revoke_all_schemas_permissions(
+                    cursor, normalized_username, database_name, [schema_name]
+                )
+            else:
+                # Revoke from all schemas if none specified
+                success = self._revoke_all_schemas_permissions(
+                    cursor, normalized_username, database_name
+                )
+
+            if not success:
+                logger.warning(
+                    f"Some permission revocations failed for {normalized_username}"
+                )
+
+            # 3. Drop objects owned by user (after reassignment, this should be minimal)
+            drop_cmd = f'DROP OWNED BY "{normalized_username}"'
+
+            if not self.connection_manager.execute_sql_safely(cursor, drop_cmd):
+                logger.warning(
+                    f"Failed to drop remaining owned objects for {normalized_username}"
+                )
+
+            logger.info(f"Cleanup completed for user {normalized_username}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error during cleanup for user {username}: {e}")
+            return False
+
+    def _revoke_all_schemas_permissions(
+        self,
+        cursor,
+        username: str,
+        database_name: str,
+        specific_schemas: List[str] = None,
+    ) -> bool:
+        """
+        Helper method to revoke permissions from all schemas or specific schemas.
+
+        Args:
+            cursor: Database cursor
+            username: Username to revoke permissions from
+            database_name: Database name
+            specific_schemas: Optional list of specific schemas to target
+
+        Returns:
+            True if all revocations successful, False otherwise
+        """
+        try:
+            if specific_schemas:
+                schemas = specific_schemas
+            else:
+                # Get all schemas in database
+                cursor.execute(
+                    """
+                    SELECT schema_name 
+                    FROM information_schema.schemata 
+                    WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+                    AND catalog_name = %s
+                """,
+                    (database_name,),
+                )
+
+                schemas = [row[0] for row in cursor.fetchall()]
+
+            overall_success = True
+            for schema in schemas:
+                # Import here to avoid circular imports
+                from .role_permission_manager import RolePermissionManager
+                from .schema_manager import SchemaManager
+
+                # Create temporary instances for the cleanup operation
+                schema_manager = SchemaManager(self.connection_manager)
+                role_permission_manager = RolePermissionManager(
+                    self.connection_manager, schema_manager, self
+                )
+
+                success = role_permission_manager.revoke_all_permissions(
+                    cursor, username, database_name, schema
+                )
+                if not success:
+                    overall_success = False
+
+            return overall_success
+
+        except Exception as e:
+            logger.error(f"Error revoking permissions from schemas: {e}")
+            return False

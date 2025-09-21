@@ -28,7 +28,7 @@ class RolePermissionManager:
 
         This method checks if all the standard system roles exist, which indicates that the schema
         was created through the role initialization process and has the proper
-        standard roles (reader, writer, admin, monitor, analyst) set up.
+        standard roles (reader, writer, admin, monitor, analyst, dba_agent) set up.
 
         Args:
             cursor: Database cursor
@@ -46,6 +46,7 @@ class RolePermissionManager:
                 f"{database_name}_{schema_name}_admin",
                 f"{database_name}_{schema_name}_analyst",
                 f"{database_name}_monitor",  # Database-wide role
+                f"{database_name}_dba_agent",  # Database-wide role
             ]
 
             # Check if schema exists
@@ -90,15 +91,22 @@ class RolePermissionManager:
         Returns:
             True if it's a system role, False otherwise
         """
-        system_role_patterns = [
-            f"{database_name}_{schema_name}_reader",
-            f"{database_name}_{schema_name}_writer",
-            f"{database_name}_{schema_name}_admin",
-            f"{database_name}_{schema_name}_analyst",
-            f"{database_name}_monitor",
+        # Schema-specific roles pattern: {database_name}_{schema_name}_{role_type}
+        schema_role_types = ["reader", "writer", "admin", "analyst"]
+        schema_roles = [
+            f"{database_name}_{schema_name}_{role_type}"
+            for role_type in schema_role_types
         ]
 
-        return role_name in system_role_patterns
+        # Database-wide roles pattern: {database_name}_{role_type}
+        database_role_types = ["monitor", "dba_agent"]
+        database_roles = [
+            f"{database_name}_{role_type}" for role_type in database_role_types
+        ]
+
+        system_roles = schema_roles + database_roles
+
+        return role_name in system_roles
 
     def validate_role_assignment(
         self,
@@ -210,7 +218,7 @@ class RolePermissionManager:
                 )
                 return True
 
-            # Get all roles that the user currently has
+            # Get all roles that the user currently has for this database
             cursor.execute(
                 """
                 SELECT r.rolname 
@@ -220,7 +228,7 @@ class RolePermissionManager:
                 WHERE u.rolname = %s
                 AND r.rolname LIKE %s
                 """,
-                (username, f"{database_name}_{schema_name}_%"),
+                (username, f"{database_name}_%"),
             )
 
             assigned_roles = [row[0] for row in cursor.fetchall()]

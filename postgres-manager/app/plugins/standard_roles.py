@@ -18,8 +18,9 @@ class StandardRolePlugin(RolePlugin):
     - {db}_{schema}_reader: Read-only access to specific schema
     - {db}_{schema}_writer: Write access (inherits from reader)
     - {db}_{schema}_admin: Administrative access (inherits from writer)
+    - {db}_{schema}_analyst: Analytics access to specific schema (inherits from reader + monitoring)
     - {db}_monitor: Monitoring access with PostgreSQL native roles
-    - {db}_analyst: Analytics access (inherits from reader + monitoring)
+    - {db}_dba_agent: DBA agent monitoring role with comprehensive monitoring access
 
         All roles are created with postgres as the owner for better security
     and proper permission management.
@@ -58,6 +59,7 @@ class StandardRolePlugin(RolePlugin):
             self._create_admin_role(db_name, schema_name),
             self._create_monitor_role(db_name),
             self._create_analyst_role(db_name, schema_name),
+            self._create_dba_agent_role(db_name),
         ]
 
     def _create_reader_role(self, db_name: str, schema_name: str) -> RoleDefinition:
@@ -171,6 +173,35 @@ class StandardRolePlugin(RolePlugin):
             inherits=[reader_role],
             native_roles=["pg_read_all_stats"],
             description=f"Analytics access to {schema_name} schema in {db_name} database (inherits {reader_role} + monitoring stats)",
+            status="active",
+        )
+
+    def _create_dba_agent_role(self, db_name: str) -> RoleDefinition:
+        """Create DBA agent monitoring role definition."""
+        role_name = f"{db_name}_dba_agent"
+        sql_commands = [
+            f"CREATE ROLE {role_name} NOLOGIN;",
+            # Essential monitoring permissions
+            f"GRANT pg_monitor TO {role_name};",
+            f"GRANT pg_read_all_stats TO {role_name};",
+            f"GRANT pg_read_all_settings TO {role_name};",
+            # Monitoring extensions permissions
+            f"GRANT SELECT ON pg_stat_statements TO {role_name};",
+            # System schema permissions
+            f"GRANT USAGE ON SCHEMA information_schema TO {role_name};",
+            f"GRANT SELECT ON information_schema.tables TO {role_name};",
+            f"GRANT SELECT ON information_schema.columns TO {role_name};",
+            f"GRANT SELECT ON information_schema.table_constraints TO {role_name};",
+        ]
+
+        return RoleDefinition(
+            name=role_name,
+            version="1.0.0",
+            checksum=self._calculate_checksum(sql_commands),
+            sql_commands=sql_commands,
+            inherits=[],
+            native_roles=["pg_monitor", "pg_read_all_stats", "pg_read_all_settings"],
+            description=f"DBA agent monitoring role for {db_name} database with comprehensive monitoring access",
             status="active",
         )
 

@@ -885,3 +885,102 @@ class PostgresInheritanceRequest(BaseModel):
             }
         }
     )
+
+
+class UserCleanupRequest(BaseModel):
+    """
+    Model for user cleanup requests before deletion.
+
+    This model is used for cleaning up a user's ownership and permissions
+    before permanently deleting the IAM user from the database.
+    """
+
+    project_id: str = Field(..., description="GCP project ID")
+    instance_name: str = Field(..., description="Cloud SQL instance name")
+    database_name: str = Field(..., description="Database name")
+    region: str = Field(..., description="GCP region")
+    username: str = Field(..., description="IAM username to cleanup")
+    schema_name: Optional[str] = Field(
+        None, description="Specific schema to cleanup (if None, cleans all schemas)"
+    )
+
+    @field_validator(
+        "project_id", "instance_name", "database_name", "region", "username"
+    )
+    def validate_non_empty_strings(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Field cannot be empty or contain only whitespace")
+        return v.strip()
+
+    @field_validator("schema_name")
+    def validate_schema_name(cls, v):
+        if v is not None and (not v or not v.strip()):
+            raise ValueError("Schema name cannot be empty or contain only whitespace")
+        return v.strip() if v else None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "project_id": "my-project",
+                "instance_name": "my-instance",
+                "database_name": "my-database",
+                "region": "europe-west1",
+                "username": "user@example.com",
+                "schema_name": "app_schema",
+            }
+        }
+    )
+
+
+class UserCleanupResponse(BaseModel):
+    """
+    Model for user cleanup responses.
+
+    Attributes:
+        success: Whether the cleanup operation was successful
+        message: Response message
+        username: Username that was cleaned up
+        normalized_username: Normalized username used in operations
+        database_name: Database name
+        schema_name: Schema name (if specified)
+        ownership_transferred: Whether ownership was successfully transferred
+        permissions_revoked: Whether permissions were successfully revoked
+        objects_dropped: Whether remaining objects were dropped
+        execution_time_seconds: Time taken to execute the operation
+    """
+
+    success: bool = Field(..., description="Whether the operation was successful")
+    message: str = Field(..., description="Response message")
+    username: str = Field(..., description="Original username")
+    normalized_username: str = Field(
+        ..., description="Normalized username used in operations"
+    )
+    database_name: str = Field(..., description="Database name")
+    schema_name: Optional[str] = Field(None, description="Schema name (if specified)")
+    ownership_transferred: bool = Field(
+        ..., description="Whether ownership was transferred"
+    )
+    permissions_revoked: bool = Field(
+        ..., description="Whether permissions were revoked"
+    )
+    objects_dropped: bool = Field(
+        ..., description="Whether remaining objects were dropped"
+    )
+    execution_time_seconds: float = Field(..., description="Execution time in seconds")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "success": True,
+                "message": "User cleanup completed successfully",
+                "username": "user@example.com",
+                "normalized_username": "user@example.com",
+                "database_name": "my-database",
+                "schema_name": "app_schema",
+                "ownership_transferred": True,
+                "permissions_revoked": True,
+                "objects_dropped": True,
+                "execution_time_seconds": 0.123,
+            }
+        }
+    )
